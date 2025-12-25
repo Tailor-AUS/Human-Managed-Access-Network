@@ -50,16 +50,20 @@ export {
 export {
   VaultManager,
   MemoryVaultStorage,
+  SQLiteVaultStorage,
   type VaultManagerConfig,
   type VaultStorage,
   type ItemQuery,
+  type SQLiteStorageConfig,
 } from './vault/index.js';
 
 // Audit module
 export {
   AuditLogger,
   MemoryAuditStorage,
+  SQLiteAuditStorage,
   type AuditStorage,
+  type SQLiteAuditStorageConfig,
 } from './audit/index.js';
 
 // Access control module
@@ -73,3 +77,34 @@ export {
 
 // HMAN SDK - convenient wrapper for common operations
 export { HmanSDK, createHmanSDK, type HmanSDKConfig } from './sdk.js';
+
+// E2EE Messaging module
+export {
+  generateIdentityKeyPair,
+  generatePreKey,
+  generatePreKeys,
+  encryptMessage,
+  decryptMessage,
+  SessionManager,
+  createSessionManager,
+  restoreSessionManager,
+  MessageStore,
+  type IdentityKeyPair,
+  type PreKey,
+  type SignedPreKey,
+  type EncryptedMessage,
+  type Session,
+  type MessageStoreConfig,
+  type StoredMessage,
+} from './messaging/index.js';
+
+// Demo data seeder
+export {
+  seedDemoData,
+  seedIdentity,
+  seedFinance,
+  seedHealth,
+  seedDiary,
+  seedCalendar,
+  type SeederOptions,
+} from './seeder/index.js';
