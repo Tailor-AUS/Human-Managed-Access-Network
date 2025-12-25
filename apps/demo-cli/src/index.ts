@@ -9,14 +9,18 @@
  * - Audit logging
  */
 
+import { writeFileSync } from 'fs';
 import {
   createHmanSDK,
   VaultType,
+  getHmanExportFilename,
+  HmanFileType,
   type AccessRequest,
   type AccessResponse,
   type TransactionContent,
   type DiaryEntryContent,
   type ProfileContent,
+  type ContactMethod,
 } from '@hman/core';
 
 // ANSI color codes
@@ -127,19 +131,38 @@ async function main(): Promise<void> {
   subheader('Adding Data to Vaults');
 
   // Identity vault (Open - Level 0)
+  // Creating personalized profile with Signal as primary contact
+  const contactMethods: ContactMethod[] = [
+    {
+      platform: 'signal',
+      identifier: '+61420309085',
+      isPrimary: true,
+      isVerified: false,
+      label: 'Personal',
+    },
+    {
+      platform: 'sms',
+      identifier: '+61420309085',
+      isPrimary: false,
+      label: 'Mobile',
+    },
+  ];
+
   const profileId = await sdk.addToVault<ProfileContent>(
     VaultType.Identity,
     'profile',
     'My Profile',
     {
-      displayName: 'Jane Smith',
-      email: 'jane@example.com',
-      phone: '+61 400 123 456',
+      displayName: 'HMAN Pioneer',
+      phone: '+61420309085',
       languagePreference: 'en-AU',
       timezone: 'Australia/Sydney',
+      contactMethods,
+      bio: 'First HMAN user - pioneering sovereign digital identity.',
     }
   );
   success(`Added profile to Identity vault (ID: ${profileId.slice(0, 8)}...)`);
+  info(`Primary contact: Signal (+61420309085)`);
 
   // Finance vault (Gated - Level 2)
   const txId1 = await sdk.addToVault<TransactionContent>(
@@ -284,6 +307,30 @@ async function main(): Promise<void> {
     }
   }
 
+  // Export to .hman file
+  header('Creating Your First .hman File');
+
+  log('Exporting your Identity vault to .hman format...', 'dim');
+  console.log('');
+
+  const exportBuffer = await sdk.exportVault(VaultType.Identity, {
+    compress: true,
+  });
+
+  const filename = getHmanExportFilename(HmanFileType.VaultExport, 'my-first-identity');
+  writeFileSync(filename, exportBuffer);
+
+  success(`Exported to: ${filename}`);
+  info(`File size: ${(exportBuffer.length / 1024).toFixed(2)} KB`);
+  console.log('');
+
+  log('Your .hman file contains:', 'cyan');
+  log('  📋 Profile: HMAN Pioneer', 'cyan');
+  log('  📱 Signal: +61420309085 (Primary)', 'cyan');
+  log('  🌏 Timezone: Australia/Sydney', 'cyan');
+  log('  🔐 Encrypted & compressed with gzip', 'cyan');
+  console.log('');
+
   // Summary
   header('Demo Complete');
 
@@ -292,6 +339,7 @@ async function main(): Promise<void> {
   log('  ✓ Tiered permissions (Open, Standard, Gated, Locked)', 'green');
   log('  ✓ Human-in-the-loop access control for sensitive data', 'green');
   log('  ✓ Integrity-verified audit logging', 'green');
+  log('  ✓ .hman file format for portable encrypted exports', 'green');
   console.log('');
 
   log('Next steps:', 'yellow');
@@ -299,6 +347,10 @@ async function main(): Promise<void> {
   log('  • Build mobile app with React Native', 'dim');
   log('  • Add E2EE messaging with libsignal', 'dim');
   log('  • Integrate PayID for payments', 'dim');
+  console.log('');
+
+  log('📁 Your first .hman file has been created!', 'bright');
+  log(`   ${filename}`, 'green');
   console.log('');
 
   // Lock the SDK

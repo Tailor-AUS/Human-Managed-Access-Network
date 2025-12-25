@@ -40,3 +40,4 @@ temp/
 *.keychain
 *.recovery
 hman-data/
+*.hman

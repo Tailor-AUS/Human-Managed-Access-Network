@@ -21,6 +21,8 @@ export {
   type BillContent,
   type HealthRecordContent,
   type IdentityDocumentContent,
+  type MessagingPlatform,
+  type ContactMethod,
   type ProfileContent,
   type DiaryEntryContent,
   type CalendarEventContent,
