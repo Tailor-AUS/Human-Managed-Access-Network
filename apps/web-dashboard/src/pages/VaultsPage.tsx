@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import {
-  Vault,
+  Archive,
   User,
   Wallet,
   Heart,
@@ -18,7 +18,7 @@ interface VaultData {
   id: string
   name: string
   description: string
-  icon: typeof Vault
+  icon: typeof Archive
   itemCount: number
   isUnlocked: boolean
   permissionLevel: 'open' | 'standard' | 'gated' | 'locked'

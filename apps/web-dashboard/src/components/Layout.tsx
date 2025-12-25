@@ -1,7 +1,7 @@
 import { Outlet, NavLink } from 'react-router-dom'
 import {
   LayoutDashboard,
-  Vault,
+  Archive,
   Bell,
   Shield,
   Users,
@@ -13,7 +13,7 @@ import { useState } from 'react'
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/vaults', label: 'Vaults', icon: Vault },
+  { path: '/vaults', label: 'Vaults', icon: Archive },
   { path: '/requests', label: 'Requests', icon: Bell, badge: 2 },
   { path: '/audit', label: 'Audit Log', icon: Shield },
   { path: '/delegations', label: 'Delegations', icon: Users },
