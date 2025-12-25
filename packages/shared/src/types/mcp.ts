@@ -1,4 +1,4 @@
-import type { PermissionLevel } from './permissions.js';
+import { PermissionLevel } from './permissions.js';
 
 /**
  * MCP-specific types for HMAN Gate

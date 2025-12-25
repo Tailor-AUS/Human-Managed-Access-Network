@@ -29,6 +29,58 @@ import {
   type AccessResponse,
 } from '@hman/core';
 
+/** Error class for MCP tool errors */
+export class ToolError extends Error {
+  constructor(
+    message: string,
+    public readonly toolName: string,
+    public readonly code: ToolErrorCode
+  ) {
+    super(message);
+    this.name = 'ToolError';
+  }
+}
+
+export enum ToolErrorCode {
+  InvalidInput = 'INVALID_INPUT',
+  NotInitialized = 'NOT_INITIALIZED',
+  ExecutionFailed = 'EXECUTION_FAILED',
+  AccessDenied = 'ACCESS_DENIED',
+  VaultNotFound = 'VAULT_NOT_FOUND',
+}
+
+/** Input validation helpers */
+const validators = {
+  isString(value: unknown, minLength = 0, maxLength = 1000): value is string {
+    return typeof value === 'string' && value.length >= minLength && value.length <= maxLength;
+  },
+
+  isNumber(value: unknown, min?: number, max?: number): value is number {
+    if (typeof value !== 'number' || isNaN(value)) return false;
+    if (min !== undefined && value < min) return false;
+    if (max !== undefined && value > max) return false;
+    return true;
+  },
+
+  isPositiveNumber(value: unknown): value is number {
+    return this.isNumber(value, 0.01);
+  },
+
+  isArray(value: unknown): value is unknown[] {
+    return Array.isArray(value);
+  },
+
+  isValidVaultType(value: unknown): value is VaultType {
+    return Object.values(VaultType).includes(value as VaultType);
+  },
+
+  isISODate(value: unknown): boolean {
+    if (typeof value !== 'string') return false;
+    const date = new Date(value);
+    return !isNaN(date.getTime());
+  },
+};
+
 export interface HmanGateConfig {
   /** Name of the server */
   name?: string;
@@ -224,53 +276,76 @@ export class HmanGate {
   private async handleCallTool(request: CallToolRequest): Promise<{
     content: Array<{ type: 'text'; text: string }>;
   }> {
-    if (!this.sdk) {
-      throw new Error('HMAN Gate not initialized');
-    }
-
     const toolName = request.params.name;
-    const args = request.params.arguments as Record<string, unknown>;
 
-    // Find tool definition
-    const toolDef = DEFAULT_TOOLS.find(t => t.name === toolName);
-    if (!toolDef) {
-      throw new Error(`Unknown tool: ${toolName}`);
-    }
-
-    // Check if tool requires confirmation
-    if (toolDef.requiresConfirmation) {
-      const decision = await this.sdk.gate.requestAccess(
-        this.currentRequester,
-        `hman://tools/${toolName}`,
-        `Execute ${toolName} with args: ${JSON.stringify(args)}`
-      );
-
-      if (!decision.granted) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify({
-                success: false,
-                error: decision.denialReason ?? 'Tool execution denied by user',
-              }),
-            },
-          ],
-        };
+    try {
+      if (!this.sdk) {
+        throw new ToolError('HMAN Gate not initialized', toolName, ToolErrorCode.NotInitialized);
       }
+
+      const args = request.params.arguments as Record<string, unknown>;
+
+      // Find tool definition
+      const toolDef = DEFAULT_TOOLS.find(t => t.name === toolName);
+      if (!toolDef) {
+        throw new ToolError(`Unknown tool: ${toolName}`, toolName, ToolErrorCode.InvalidInput);
+      }
+
+      // Check if tool requires confirmation
+      if (toolDef.requiresConfirmation) {
+        const decision = await this.sdk.gate.requestAccess(
+          this.currentRequester,
+          `hman://tools/${toolName}`,
+          `Execute ${toolName} with args: ${JSON.stringify(args)}`
+        );
+
+        if (!decision.granted) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  success: false,
+                  error: decision.denialReason ?? 'Tool execution denied by user',
+                  code: ToolErrorCode.AccessDenied,
+                }),
+              },
+            ],
+          };
+        }
+      }
+
+      // Execute the tool with error handling
+      const result = await this.executeTool(toolName, args);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(result, null, 2),
+          },
+        ],
+      };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      const errorCode = err instanceof ToolError ? err.code : ToolErrorCode.ExecutionFailed;
+
+      console.error(`Tool execution error (${toolName}):`, err);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: errorMessage,
+              code: errorCode,
+              tool: toolName,
+            }),
+          },
+        ],
+      };
     }
-
-    // Execute the tool
-    const result = await this.executeTool(toolName, args);
-
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(result, null, 2),
-        },
-      ],
-    };
   }
 
   /**
@@ -324,9 +399,66 @@ export class HmanGate {
   }
 
   /**
+   * Validate required arguments for a tool
+   */
+  private validateArgs(
+    toolName: string,
+    args: Record<string, unknown>,
+    schema: Record<string, { type: 'string' | 'number' | 'array' | 'date'; required?: boolean; min?: number; max?: number }>
+  ): void {
+    for (const [key, config] of Object.entries(schema)) {
+      const value = args[key];
+
+      if (config.required && (value === undefined || value === null)) {
+        throw new ToolError(`Missing required argument: ${key}`, toolName, ToolErrorCode.InvalidInput);
+      }
+
+      if (value === undefined || value === null) continue;
+
+      switch (config.type) {
+        case 'string':
+          if (!validators.isString(value, config.min ?? 1, config.max ?? 1000)) {
+            throw new ToolError(
+              `Invalid ${key}: must be a non-empty string (max ${config.max ?? 1000} chars)`,
+              toolName,
+              ToolErrorCode.InvalidInput
+            );
+          }
+          break;
+        case 'number':
+          if (!validators.isNumber(value, config.min, config.max)) {
+            throw new ToolError(
+              `Invalid ${key}: must be a number${config.min !== undefined ? ` >= ${config.min}` : ''}${config.max !== undefined ? ` <= ${config.max}` : ''}`,
+              toolName,
+              ToolErrorCode.InvalidInput
+            );
+          }
+          break;
+        case 'array':
+          if (!validators.isArray(value)) {
+            throw new ToolError(`Invalid ${key}: must be an array`, toolName, ToolErrorCode.InvalidInput);
+          }
+          break;
+        case 'date':
+          if (!validators.isISODate(value)) {
+            throw new ToolError(`Invalid ${key}: must be a valid ISO date string`, toolName, ToolErrorCode.InvalidInput);
+          }
+          break;
+      }
+    }
+  }
+
+  /**
    * Handle approve_payment tool
    */
   private async handleApprovePayment(args: Record<string, unknown>): Promise<unknown> {
+    this.validateArgs('approve_payment', args, {
+      payee: { type: 'string', required: true },
+      amount: { type: 'number', required: true, min: 0.01, max: 1000000 },
+      currency: { type: 'string', required: false },
+      reference: { type: 'string', required: false },
+    });
+
     // In a real implementation, this would integrate with PayID
     return {
       success: true,
@@ -346,6 +478,13 @@ export class HmanGate {
    * Handle create_delegation tool
    */
   private async handleCreateDelegation(args: Record<string, unknown>): Promise<unknown> {
+    this.validateArgs('create_delegation', args, {
+      delegate_handle: { type: 'string', required: true },
+      vault: { type: 'string', required: true },
+      permissions: { type: 'array', required: true },
+      expires_in_days: { type: 'number', required: false, min: 1, max: 365 },
+    });
+
     // In a real implementation, this would create a delegation
     return {
       success: true,
@@ -364,7 +503,15 @@ export class HmanGate {
    * Handle schedule_event tool
    */
   private async handleScheduleEvent(args: Record<string, unknown>): Promise<unknown> {
-    if (!this.sdk) throw new Error('Not initialized');
+    if (!this.sdk) throw new ToolError('Not initialized', 'schedule_event', ToolErrorCode.NotInitialized);
+
+    this.validateArgs('schedule_event', args, {
+      title: { type: 'string', required: true, max: 200 },
+      start_time: { type: 'date', required: true },
+      end_time: { type: 'date', required: false },
+      description: { type: 'string', required: false, max: 2000 },
+      location: { type: 'string', required: false, max: 500 },
+    });
 
     const eventId = await this.sdk.addToVault(
       VaultType.Calendar,
@@ -395,7 +542,14 @@ export class HmanGate {
    * Handle add_diary_entry tool
    */
   private async handleAddDiaryEntry(args: Record<string, unknown>): Promise<unknown> {
-    if (!this.sdk) throw new Error('Not initialized');
+    if (!this.sdk) throw new ToolError('Not initialized', 'add_diary_entry', ToolErrorCode.NotInitialized);
+
+    this.validateArgs('add_diary_entry', args, {
+      content: { type: 'string', required: true, max: 10000 },
+      date: { type: 'date', required: false },
+      mood: { type: 'string', required: false, max: 50 },
+      tags: { type: 'array', required: false },
+    });
 
     const entryId = await this.sdk.addToVault(
       VaultType.Diary,
@@ -421,7 +575,14 @@ export class HmanGate {
    * Handle query_audit_log tool
    */
   private async handleQueryAuditLog(args: Record<string, unknown>): Promise<unknown> {
-    if (!this.sdk) throw new Error('Not initialized');
+    if (!this.sdk) throw new ToolError('Not initialized', 'query_audit_log', ToolErrorCode.NotInitialized);
+
+    this.validateArgs('query_audit_log', args, {
+      start_date: { type: 'date', required: false },
+      end_date: { type: 'date', required: false },
+      action_types: { type: 'array', required: false },
+      limit: { type: 'number', required: false, min: 1, max: 500 },
+    });
 
     const entries = await this.sdk.auditLogger.query({
       startTime: args.start_date ? new Date(args.start_date as string) : undefined,
@@ -448,6 +609,21 @@ export class HmanGate {
    * Handle revoke_delegation tool
    */
   private async handleRevokeDelegation(args: Record<string, unknown>): Promise<unknown> {
+    this.validateArgs('revoke_delegation', args, {
+      delegation_id: { type: 'string', required: false },
+      delegate_handle: { type: 'string', required: false },
+      vault: { type: 'string', required: false },
+    });
+
+    // At least one identifier must be provided
+    if (!args.delegation_id && !args.delegate_handle) {
+      throw new ToolError(
+        'Either delegation_id or delegate_handle must be provided',
+        'revoke_delegation',
+        ToolErrorCode.InvalidInput
+      );
+    }
+
     return {
       success: true,
       message: 'Delegation revoked',
@@ -464,7 +640,14 @@ export class HmanGate {
    * Handle create_reminder tool
    */
   private async handleCreateReminder(args: Record<string, unknown>): Promise<unknown> {
-    if (!this.sdk) throw new Error('Not initialized');
+    if (!this.sdk) throw new ToolError('Not initialized', 'create_reminder', ToolErrorCode.NotInitialized);
+
+    this.validateArgs('create_reminder', args, {
+      message: { type: 'string', required: true, max: 500 },
+      remind_at: { type: 'date', required: true },
+      repeat: { type: 'string', required: false },
+      priority: { type: 'string', required: false },
+    });
 
     const reminderId = await this.sdk.addToVault(
       VaultType.Calendar,
@@ -494,11 +677,17 @@ export class HmanGate {
    * Handle search_vaults tool
    */
   private async handleSearchVaults(args: Record<string, unknown>): Promise<unknown> {
-    if (!this.sdk) throw new Error('Not initialized');
+    if (!this.sdk) throw new ToolError('Not initialized', 'search_vaults', ToolErrorCode.NotInitialized);
+
+    this.validateArgs('search_vaults', args, {
+      query: { type: 'string', required: true, max: 200 },
+      vaults: { type: 'array', required: false },
+      limit: { type: 'number', required: false, min: 1, max: 100 },
+    });
 
     const query = args.query as string;
     const vaultTypes = (args.vaults as string[] | undefined) ?? Object.values(VaultType);
-    const limit = (args.limit as number) ?? 20;
+    const limit = Math.min((args.limit as number) ?? 20, 100);
 
     const results: Array<{
       vault: string;
@@ -553,9 +742,14 @@ export class HmanGate {
    * Handle get_bill_summary tool
    */
   private async handleGetBillSummary(args: Record<string, unknown>): Promise<unknown> {
-    if (!this.sdk) throw new Error('Not initialized');
+    if (!this.sdk) throw new ToolError('Not initialized', 'get_bill_summary', ToolErrorCode.NotInitialized);
 
-    const daysAhead = (args.days_ahead as number) ?? 30;
+    this.validateArgs('get_bill_summary', args, {
+      days_ahead: { type: 'number', required: false, min: 1, max: 365 },
+      category: { type: 'string', required: false },
+    });
+
+    const daysAhead = Math.min((args.days_ahead as number) ?? 30, 365);
     const includePaid = (args.include_paid as boolean) ?? false;
 
     const vault = await this.sdk.getVaultByType(VaultType.Finance);
@@ -609,11 +803,17 @@ export class HmanGate {
    * Handle update_profile tool
    */
   private async handleUpdateProfile(args: Record<string, unknown>): Promise<unknown> {
-    if (!this.sdk) throw new Error('Not initialized');
+    if (!this.sdk) throw new ToolError('Not initialized', 'update_profile', ToolErrorCode.NotInitialized);
+
+    this.validateArgs('update_profile', args, {
+      display_name: { type: 'string', required: false, max: 100 },
+      timezone: { type: 'string', required: false, max: 50 },
+      language: { type: 'string', required: false, max: 10 },
+    });
 
     const vault = await this.sdk.getVaultByType(VaultType.Identity);
     if (!vault) {
-      return { success: false, error: 'Identity vault not found' };
+      throw new ToolError('Identity vault not found', 'update_profile', ToolErrorCode.VaultNotFound);
     }
 
     await this.sdk.vaultManager.unlockVault(vault.id);
@@ -635,6 +835,12 @@ export class HmanGate {
    * Handle send_message tool
    */
   private async handleSendMessage(args: Record<string, unknown>): Promise<unknown> {
+    this.validateArgs('send_message', args, {
+      recipient: { type: 'string', required: true },
+      content: { type: 'string', required: true, max: 5000 },
+      message_type: { type: 'string', required: false },
+    });
+
     return {
       success: true,
       message: 'Message sent',
@@ -651,14 +857,29 @@ export class HmanGate {
    * Handle export_vault_data tool
    */
   private async handleExportVaultData(args: Record<string, unknown>): Promise<unknown> {
-    if (!this.sdk) throw new Error('Not initialized');
+    if (!this.sdk) throw new ToolError('Not initialized', 'export_vault_data', ToolErrorCode.NotInitialized);
+
+    this.validateArgs('export_vault_data', args, {
+      vault: { type: 'string', required: true },
+      format: { type: 'string', required: true },
+      item_types: { type: 'array', required: false },
+    });
 
     const vaultType = args.vault as string;
     const format = args.format as string;
 
+    // Validate vault type
+    if (!validators.isValidVaultType(vaultType)) {
+      throw new ToolError(
+        `Invalid vault type: ${vaultType}. Must be one of: ${Object.values(VaultType).join(', ')}`,
+        'export_vault_data',
+        ToolErrorCode.InvalidInput
+      );
+    }
+
     const vault = await this.sdk.getVaultByType(vaultType as VaultType);
     if (!vault) {
-      return { success: false, error: 'Vault not found' };
+      throw new ToolError(`Vault not found: ${vaultType}`, 'export_vault_data', ToolErrorCode.VaultNotFound);
     }
 
     await this.sdk.vaultManager.unlockVault(vault.id);

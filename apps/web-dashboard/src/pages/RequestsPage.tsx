@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Clock,
   Check,
@@ -10,6 +10,8 @@ import {
   CheckCircle,
   XCircle,
   Filter,
+  RefreshCw,
+  Loader2,
 } from 'lucide-react'
 
 interface AccessRequest {
@@ -24,7 +26,43 @@ interface AccessRequest {
   status: 'pending' | 'approved' | 'denied' | 'expired'
 }
 
-const mockRequests: AccessRequest[] = [
+// Loading skeleton component
+function LoadingSkeleton({ className = '' }: { className?: string }) {
+  return (
+    <div className={`animate-pulse bg-gray-700/50 rounded ${className}`} />
+  )
+}
+
+// Error display component
+function ErrorDisplay({
+  message,
+  onRetry
+}: {
+  message: string
+  onRetry: () => void
+}) {
+  return (
+    <div className="rounded-xl bg-red-900/20 border border-red-500/30 p-6 text-center">
+      <AlertTriangle className="mx-auto h-10 w-10 text-red-400" />
+      <h3 className="mt-4 font-semibold text-red-400">Error Loading Requests</h3>
+      <p className="mt-2 text-sm text-gray-400">{message}</p>
+      <button
+        onClick={onRetry}
+        className="mt-4 inline-flex items-center gap-2 rounded-lg bg-red-500/20 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/30 transition-colors"
+      >
+        <RefreshCw className="h-4 w-4" />
+        Try Again
+      </button>
+    </div>
+  )
+}
+
+// Mock data fetcher
+async function fetchRequests(): Promise<AccessRequest[]> {
+  // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 400))
+
+  return [
   {
     id: '1',
     requesterName: 'Claude',
@@ -80,7 +118,8 @@ const mockRequests: AccessRequest[] = [
     expiresAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
     status: 'denied',
   },
-]
+  ]
+}
 
 type FilterStatus = 'all' | 'pending' | 'approved' | 'denied' | 'expired'
 
@@ -135,13 +174,114 @@ function formatTimeRemaining(expiresAt: Date): string {
 }
 
 export function RequestsPage() {
+  const [requests, setRequests] = useState<AccessRequest[]>([])
   const [filter, setFilter] = useState<FilterStatus>('all')
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [actionInProgress, setActionInProgress] = useState<string | null>(null)
 
-  const filteredRequests = mockRequests.filter(
+  const loadData = useCallback(async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setIsRefreshing(true)
+      } else {
+        setIsLoading(true)
+      }
+      setError(null)
+      const result = await fetchRequests()
+      setRequests(result)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load requests')
+    } finally {
+      setIsLoading(false)
+      setIsRefreshing(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  const handleApprove = async (requestId: string) => {
+    setActionInProgress(requestId)
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 500))
+      setRequests(prev => prev.map(r =>
+        r.id === requestId ? { ...r, status: 'approved' as const } : r
+      ))
+    } catch (err) {
+      setError('Failed to approve request')
+    } finally {
+      setActionInProgress(null)
+    }
+  }
+
+  const handleDeny = async (requestId: string) => {
+    setActionInProgress(requestId)
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 500))
+      setRequests(prev => prev.map(r =>
+        r.id === requestId ? { ...r, status: 'denied' as const } : r
+      ))
+    } catch (err) {
+      setError('Failed to deny request')
+    } finally {
+      setActionInProgress(null)
+    }
+  }
+
+  const filteredRequests = requests.filter(
     (request) => filter === 'all' || request.status === filter
   )
 
-  const pendingCount = mockRequests.filter((r) => r.status === 'pending').length
+  const pendingCount = requests.filter((r) => r.status === 'pending').length
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <LoadingSkeleton className="h-8 w-48" />
+          <LoadingSkeleton className="h-4 w-64 mt-2" />
+        </div>
+        <div className="flex gap-2">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <LoadingSkeleton key={i} className="h-10 w-24 rounded-full" />
+          ))}
+        </div>
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="rounded-xl bg-surface border border-border p-6">
+              <div className="flex gap-4">
+                <LoadingSkeleton className="h-12 w-12 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <LoadingSkeleton className="h-5 w-32" />
+                  <LoadingSkeleton className="h-4 w-48" />
+                  <LoadingSkeleton className="h-4 w-full" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error && requests.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">Access Requests</h1>
+          <p className="text-gray-400">Manage access requests from AI and bots</p>
+        </div>
+        <ErrorDisplay message={error} onRetry={() => loadData()} />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -153,7 +293,28 @@ export function RequestsPage() {
             {pendingCount} pending request{pendingCount !== 1 && 's'} awaiting your approval
           </p>
         </div>
+        <button
+          onClick={() => loadData(true)}
+          disabled={isRefreshing}
+          className="flex items-center gap-2 rounded-lg bg-surface border border-border px-4 py-2 text-sm font-medium hover:bg-background-tertiary disabled:opacity-50 transition-colors"
+        >
+          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          {isRefreshing ? 'Refreshing...' : 'Refresh'}
+        </button>
       </div>
+
+      {/* Error banner (for non-fatal errors) */}
+      {error && (
+        <div className="rounded-lg bg-red-900/20 border border-red-500/30 p-3 flex items-center justify-between">
+          <span className="text-sm text-red-400">{error}</span>
+          <button
+            onClick={() => setError(null)}
+            className="text-red-400 hover:text-red-300"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2">
@@ -250,12 +411,28 @@ export function RequestsPage() {
                 {/* Actions */}
                 {request.status === 'pending' && (
                   <div className="flex gap-2 lg:flex-shrink-0">
-                    <button className="flex items-center gap-2 rounded-lg bg-level-open px-4 py-2 text-sm font-medium text-black hover:bg-level-open/90">
-                      <Check className="h-4 w-4" />
+                    <button
+                      onClick={() => handleApprove(request.id)}
+                      disabled={actionInProgress === request.id}
+                      className="flex items-center gap-2 rounded-lg bg-level-open px-4 py-2 text-sm font-medium text-black hover:bg-level-open/90 disabled:opacity-50 transition-colors"
+                    >
+                      {actionInProgress === request.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Check className="h-4 w-4" />
+                      )}
                       Approve
                     </button>
-                    <button className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-background-tertiary">
-                      <X className="h-4 w-4" />
+                    <button
+                      onClick={() => handleDeny(request.id)}
+                      disabled={actionInProgress === request.id}
+                      className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-background-tertiary disabled:opacity-50 transition-colors"
+                    >
+                      {actionInProgress === request.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <X className="h-4 w-4" />
+                      )}
                       Deny
                     </button>
                   </div>
