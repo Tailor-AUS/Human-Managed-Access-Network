@@ -24,6 +24,28 @@ import {
   generateNonce,
 } from '../crypto/index.js';
 
+/** Error class for vault-related errors */
+export class VaultError extends Error {
+  constructor(
+    message: string,
+    public readonly code: VaultErrorCode,
+    public readonly cause?: Error
+  ) {
+    super(message);
+    this.name = 'VaultError';
+  }
+}
+
+export enum VaultErrorCode {
+  NotFound = 'VAULT_NOT_FOUND',
+  Locked = 'VAULT_LOCKED',
+  DecryptionFailed = 'DECRYPTION_FAILED',
+  EncryptionFailed = 'ENCRYPTION_FAILED',
+  StorageError = 'STORAGE_ERROR',
+  KeyManagerLocked = 'KEY_MANAGER_LOCKED',
+  InvalidInput = 'INVALID_INPUT',
+}
+
 export interface VaultManagerConfig {
   /** Storage backend for vaults */
   storage: VaultStorage;
@@ -78,6 +100,57 @@ export class VaultManager {
   }
 
   /**
+   * Validate string input
+   */
+  private validateString(value: string, fieldName: string, maxLength = 1000): void {
+    if (!value || typeof value !== 'string') {
+      throw new VaultError(
+        `${fieldName} is required and must be a string`,
+        VaultErrorCode.InvalidInput
+      );
+    }
+    if (value.trim().length === 0) {
+      throw new VaultError(
+        `${fieldName} cannot be empty`,
+        VaultErrorCode.InvalidInput
+      );
+    }
+    if (value.length > maxLength) {
+      throw new VaultError(
+        `${fieldName} exceeds maximum length of ${maxLength}`,
+        VaultErrorCode.InvalidInput
+      );
+    }
+  }
+
+  /**
+   * Safely decrypt JSON content with error handling
+   */
+  private safeDecryptJSON<T>(
+    encryptedContent: string,
+    nonce: string,
+    vaultKey: Uint8Array,
+    itemId: string
+  ): T {
+    if (!encryptedContent || !nonce) {
+      throw new VaultError(
+        `Missing encrypted content or nonce for item ${itemId}`,
+        VaultErrorCode.DecryptionFailed
+      );
+    }
+
+    try {
+      return decryptJSON<T>(encryptedContent, nonce, vaultKey);
+    } catch (err) {
+      throw new VaultError(
+        `Failed to decrypt item ${itemId}: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        VaultErrorCode.DecryptionFailed,
+        err instanceof Error ? err : undefined
+      );
+    }
+  }
+
+  /**
    * Create a new vault
    */
   async createVault(
@@ -88,8 +161,13 @@ export class VaultManager {
       defaultPermissionLevel?: PermissionLevel;
     } = {}
   ): Promise<Vault> {
+    this.validateString(name, 'Vault name', 255);
+    if (options.description) {
+      this.validateString(options.description, 'Description', 1000);
+    }
+
     if (!this.keyManager.isUnlocked()) {
-      throw new Error('Key manager is locked');
+      throw new VaultError('Key manager is locked', VaultErrorCode.KeyManagerLocked);
     }
 
     const vaultId = uuidv4();
@@ -213,13 +291,27 @@ export class VaultManager {
       tags?: string[];
     } = {}
   ): Promise<VaultItem> {
+    // Input validation
+    this.validateString(vaultId, 'Vault ID', 36);
+    this.validateString(itemType, 'Item type', 100);
+    this.validateString(title, 'Title', 500);
+
+    if (options.tags) {
+      if (!Array.isArray(options.tags)) {
+        throw new VaultError('Tags must be an array', VaultErrorCode.InvalidInput);
+      }
+      for (const tag of options.tags) {
+        this.validateString(tag, 'Tag', 100);
+      }
+    }
+
     const vault = await this.storage.getVault(vaultId);
     if (!vault) {
-      throw new Error(`Vault not found: ${vaultId}`);
+      throw new VaultError(`Vault not found: ${vaultId}`, VaultErrorCode.NotFound);
     }
 
     if (!this.keyManager.hasVaultKey(vaultId)) {
-      throw new Error(`Vault is locked: ${vaultId}`);
+      throw new VaultError(`Vault is locked: ${vaultId}`, VaultErrorCode.Locked);
     }
 
     const vaultKey = this.keyManager.getVaultKey(vaultId);
@@ -269,17 +361,24 @@ export class VaultManager {
    * Get an item and decrypt it
    */
   async getItem<T>(itemId: string): Promise<DecryptedVaultItem<T> | null> {
+    this.validateString(itemId, 'Item ID', 36);
+
     const item = await this.storage.getItem(itemId);
     if (!item) {
       return null;
     }
 
     if (!this.keyManager.hasVaultKey(item.vaultId)) {
-      throw new Error(`Vault is locked: ${item.vaultId}`);
+      throw new VaultError(`Vault is locked: ${item.vaultId}`, VaultErrorCode.Locked);
     }
 
     const vaultKey = this.keyManager.getVaultKey(item.vaultId);
-    const content = decryptJSON<T>(item.encryptedContent, item.contentNonce, vaultKey);
+    const content = this.safeDecryptJSON<T>(
+      item.encryptedContent,
+      item.contentNonce,
+      vaultKey,
+      item.id
+    );
 
     return {
       id: item.id,
@@ -323,56 +422,87 @@ export class VaultManager {
    * Get all items in a vault (decrypted)
    */
   async getVaultItems<T>(vaultId: string): Promise<DecryptedVaultItem<T>[]> {
+    this.validateString(vaultId, 'Vault ID', 36);
+
     if (!this.keyManager.hasVaultKey(vaultId)) {
-      throw new Error(`Vault is locked: ${vaultId}`);
+      throw new VaultError(`Vault is locked: ${vaultId}`, VaultErrorCode.Locked);
     }
 
     const items = await this.storage.getItemsByVault(vaultId);
     const vaultKey = this.keyManager.getVaultKey(vaultId);
+    const results: DecryptedVaultItem<T>[] = [];
 
-    return items.map(item => {
-      const content = decryptJSON<T>(item.encryptedContent, item.contentNonce, vaultKey);
-      return {
-        id: item.id,
-        vaultId: item.vaultId,
-        itemType: item.itemType,
-        title: item.title,
-        permission: item.permission,
-        createdAt: item.createdAt,
-        updatedAt: item.updatedAt,
-        tags: item.tags,
-        resourceUri: item.resourceUri,
-        content,
-      };
-    });
+    for (const item of items) {
+      try {
+        const content = this.safeDecryptJSON<T>(
+          item.encryptedContent,
+          item.contentNonce,
+          vaultKey,
+          item.id
+        );
+        results.push({
+          id: item.id,
+          vaultId: item.vaultId,
+          itemType: item.itemType,
+          title: item.title,
+          permission: item.permission,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          tags: item.tags,
+          resourceUri: item.resourceUri,
+          content,
+        });
+      } catch (err) {
+        // Log error but continue with other items
+        console.error(`Failed to decrypt item ${item.id}:`, err);
+      }
+    }
+
+    return results;
   }
 
   /**
    * Get items by type (decrypted)
    */
   async getItemsByType<T>(vaultId: string, itemType: string): Promise<DecryptedVaultItem<T>[]> {
+    this.validateString(vaultId, 'Vault ID', 36);
+    this.validateString(itemType, 'Item type', 100);
+
     if (!this.keyManager.hasVaultKey(vaultId)) {
-      throw new Error(`Vault is locked: ${vaultId}`);
+      throw new VaultError(`Vault is locked: ${vaultId}`, VaultErrorCode.Locked);
     }
 
     const items = await this.storage.getItemsByType(vaultId, itemType);
     const vaultKey = this.keyManager.getVaultKey(vaultId);
+    const results: DecryptedVaultItem<T>[] = [];
 
-    return items.map(item => {
-      const content = decryptJSON<T>(item.encryptedContent, item.contentNonce, vaultKey);
-      return {
-        id: item.id,
-        vaultId: item.vaultId,
-        itemType: item.itemType,
-        title: item.title,
-        permission: item.permission,
-        createdAt: item.createdAt,
-        updatedAt: item.updatedAt,
-        tags: item.tags,
-        resourceUri: item.resourceUri,
-        content,
-      };
-    });
+    for (const item of items) {
+      try {
+        const content = this.safeDecryptJSON<T>(
+          item.encryptedContent,
+          item.contentNonce,
+          vaultKey,
+          item.id
+        );
+        results.push({
+          id: item.id,
+          vaultId: item.vaultId,
+          itemType: item.itemType,
+          title: item.title,
+          permission: item.permission,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          tags: item.tags,
+          resourceUri: item.resourceUri,
+          content,
+        });
+      } catch (err) {
+        // Log error but continue with other items
+        console.error(`Failed to decrypt item ${item.id}:`, err);
+      }
+    }
+
+    return results;
   }
 
   /**

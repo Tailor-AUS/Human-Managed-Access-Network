@@ -10,6 +10,23 @@ import type { Vault, VaultItem } from '@hman/shared';
 import type { VaultKeyData } from '../crypto/index.js';
 import type { VaultStorage, ItemQuery } from './vault-manager.js';
 
+/** Error class for storage-related errors */
+export class StorageError extends Error {
+  constructor(
+    message: string,
+    public readonly operation: string,
+    public readonly cause?: Error
+  ) {
+    super(message);
+    this.name = 'StorageError';
+  }
+}
+
+/** Maximum allowed limit for queries */
+const MAX_QUERY_LIMIT = 1000;
+/** Default limit for queries */
+const DEFAULT_QUERY_LIMIT = 100;
+
 export interface SQLiteStorageConfig {
   /** Path to the database file */
   dbPath: string;
@@ -77,45 +94,97 @@ export class SQLiteVaultStorage implements VaultStorage {
     `);
   }
 
+  /**
+   * Safely parse JSON with error handling
+   */
+  private safeParseJSON<T>(json: string, field: string, defaultValue?: T): T {
+    if (!json) {
+      if (defaultValue !== undefined) return defaultValue;
+      throw new StorageError(`Missing JSON data for ${field}`, 'parseJSON');
+    }
+    try {
+      return JSON.parse(json) as T;
+    } catch (err) {
+      if (defaultValue !== undefined) return defaultValue;
+      throw new StorageError(
+        `Invalid JSON in ${field}: ${err instanceof Error ? err.message : 'Parse error'}`,
+        'parseJSON',
+        err instanceof Error ? err : undefined
+      );
+    }
+  }
+
   // Vault operations
 
   async saveVault(vault: Vault): Promise<void> {
-    const stmt = this.db.prepare(`
-      INSERT OR REPLACE INTO vaults
-      (id, type, name, description, default_permission_level, created_at, updated_at, is_unlocked, encryption_metadata)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
+    try {
+      const stmt = this.db.prepare(`
+        INSERT OR REPLACE INTO vaults
+        (id, type, name, description, default_permission_level, created_at, updated_at, is_unlocked, encryption_metadata)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
 
-    stmt.run(
-      vault.id,
-      vault.type,
-      vault.name,
-      vault.description ?? null,
-      vault.defaultPermissionLevel,
-      vault.createdAt.toISOString(),
-      vault.updatedAt.toISOString(),
-      vault.isUnlocked ? 1 : 0,
-      JSON.stringify(vault.encryptionMetadata)
-    );
+      stmt.run(
+        vault.id,
+        vault.type,
+        vault.name,
+        vault.description ?? null,
+        vault.defaultPermissionLevel,
+        vault.createdAt.toISOString(),
+        vault.updatedAt.toISOString(),
+        vault.isUnlocked ? 1 : 0,
+        JSON.stringify(vault.encryptionMetadata)
+      );
+    } catch (err) {
+      throw new StorageError(
+        `Failed to save vault ${vault.id}: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        'saveVault',
+        err instanceof Error ? err : undefined
+      );
+    }
   }
 
   async getVault(vaultId: string): Promise<Vault | null> {
-    const stmt = this.db.prepare('SELECT * FROM vaults WHERE id = ?');
-    const row = stmt.get(vaultId) as VaultRow | undefined;
+    try {
+      const stmt = this.db.prepare('SELECT * FROM vaults WHERE id = ?');
+      const row = stmt.get(vaultId) as VaultRow | undefined;
 
-    if (!row) return null;
-    return this.rowToVault(row);
+      if (!row) return null;
+      return this.rowToVault(row);
+    } catch (err) {
+      throw new StorageError(
+        `Failed to get vault ${vaultId}: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        'getVault',
+        err instanceof Error ? err : undefined
+      );
+    }
   }
 
   async getAllVaults(): Promise<Vault[]> {
-    const stmt = this.db.prepare('SELECT * FROM vaults ORDER BY created_at');
-    const rows = stmt.all() as VaultRow[];
-    return rows.map(row => this.rowToVault(row));
+    try {
+      const stmt = this.db.prepare('SELECT * FROM vaults ORDER BY created_at');
+      const rows = stmt.all() as VaultRow[];
+      return rows.map(row => this.rowToVault(row));
+    } catch (err) {
+      throw new StorageError(
+        `Failed to get all vaults: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        'getAllVaults',
+        err instanceof Error ? err : undefined
+      );
+    }
   }
 
   async deleteVault(vaultId: string): Promise<void> {
-    const stmt = this.db.prepare('DELETE FROM vaults WHERE id = ?');
-    stmt.run(vaultId);
+    try {
+      const stmt = this.db.prepare('DELETE FROM vaults WHERE id = ?');
+      stmt.run(vaultId);
+    } catch (err) {
+      throw new StorageError(
+        `Failed to delete vault ${vaultId}: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        'deleteVault',
+        err instanceof Error ? err : undefined
+      );
+    }
   }
 
   private rowToVault(row: VaultRow): Vault {
@@ -128,7 +197,7 @@ export class SQLiteVaultStorage implements VaultStorage {
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
       isUnlocked: row.is_unlocked === 1,
-      encryptionMetadata: JSON.parse(row.encryption_metadata),
+      encryptionMetadata: this.safeParseJSON(row.encryption_metadata, 'encryptionMetadata'),
     };
   }
 
@@ -177,101 +246,156 @@ export class SQLiteVaultStorage implements VaultStorage {
   // Item operations
 
   async saveItem(item: VaultItem): Promise<void> {
-    const stmt = this.db.prepare(`
-      INSERT OR REPLACE INTO items
-      (id, vault_id, item_type, title, permission, created_at, updated_at, encrypted_content, content_nonce, tags, resource_uri)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
+    try {
+      const stmt = this.db.prepare(`
+        INSERT OR REPLACE INTO items
+        (id, vault_id, item_type, title, permission, created_at, updated_at, encrypted_content, content_nonce, tags, resource_uri)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
 
-    stmt.run(
-      item.id,
-      item.vaultId,
-      item.itemType,
-      item.title,
-      item.permission ? JSON.stringify(item.permission) : null,
-      item.createdAt.toISOString(),
-      item.updatedAt.toISOString(),
-      item.encryptedContent,
-      item.contentNonce,
-      item.tags ? JSON.stringify(item.tags) : null,
-      item.resourceUri
-    );
+      stmt.run(
+        item.id,
+        item.vaultId,
+        item.itemType,
+        item.title,
+        item.permission ? JSON.stringify(item.permission) : null,
+        item.createdAt.toISOString(),
+        item.updatedAt.toISOString(),
+        item.encryptedContent,
+        item.contentNonce,
+        item.tags ? JSON.stringify(item.tags) : null,
+        item.resourceUri
+      );
+    } catch (err) {
+      throw new StorageError(
+        `Failed to save item ${item.id}: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        'saveItem',
+        err instanceof Error ? err : undefined
+      );
+    }
   }
 
   async getItem(itemId: string): Promise<VaultItem | null> {
-    const stmt = this.db.prepare('SELECT * FROM items WHERE id = ?');
-    const row = stmt.get(itemId) as ItemRow | undefined;
+    try {
+      const stmt = this.db.prepare('SELECT * FROM items WHERE id = ?');
+      const row = stmt.get(itemId) as ItemRow | undefined;
 
-    if (!row) return null;
-    return this.rowToItem(row);
+      if (!row) return null;
+      return this.rowToItem(row);
+    } catch (err) {
+      throw new StorageError(
+        `Failed to get item ${itemId}: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        'getItem',
+        err instanceof Error ? err : undefined
+      );
+    }
   }
 
   async getItemsByVault(vaultId: string): Promise<VaultItem[]> {
-    const stmt = this.db.prepare('SELECT * FROM items WHERE vault_id = ? ORDER BY created_at DESC');
-    const rows = stmt.all(vaultId) as ItemRow[];
-    return rows.map(row => this.rowToItem(row));
+    try {
+      const stmt = this.db.prepare('SELECT * FROM items WHERE vault_id = ? ORDER BY created_at DESC');
+      const rows = stmt.all(vaultId) as ItemRow[];
+      return rows.map(row => this.rowToItem(row));
+    } catch (err) {
+      throw new StorageError(
+        `Failed to get items for vault ${vaultId}: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        'getItemsByVault',
+        err instanceof Error ? err : undefined
+      );
+    }
   }
 
   async getItemsByType(vaultId: string, itemType: string): Promise<VaultItem[]> {
-    const stmt = this.db.prepare(
-      'SELECT * FROM items WHERE vault_id = ? AND item_type = ? ORDER BY created_at DESC'
-    );
-    const rows = stmt.all(vaultId, itemType) as ItemRow[];
-    return rows.map(row => this.rowToItem(row));
+    try {
+      const stmt = this.db.prepare(
+        'SELECT * FROM items WHERE vault_id = ? AND item_type = ? ORDER BY created_at DESC'
+      );
+      const rows = stmt.all(vaultId, itemType) as ItemRow[];
+      return rows.map(row => this.rowToItem(row));
+    } catch (err) {
+      throw new StorageError(
+        `Failed to get items of type ${itemType} for vault ${vaultId}: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        'getItemsByType',
+        err instanceof Error ? err : undefined
+      );
+    }
   }
 
   async queryItems(query: ItemQuery): Promise<VaultItem[]> {
-    const conditions: string[] = [];
-    const params: unknown[] = [];
+    try {
+      const conditions: string[] = [];
+      const params: unknown[] = [];
 
-    if (query.vaultId) {
-      conditions.push('vault_id = ?');
-      params.push(query.vaultId);
-    }
+      if (query.vaultId) {
+        conditions.push('vault_id = ?');
+        params.push(query.vaultId);
+      }
 
-    if (query.itemType) {
-      conditions.push('item_type = ?');
-      params.push(query.itemType);
-    }
+      if (query.itemType) {
+        conditions.push('item_type = ?');
+        params.push(query.itemType);
+      }
 
-    if (query.createdAfter) {
-      conditions.push('created_at >= ?');
-      params.push(query.createdAfter.toISOString());
-    }
+      if (query.createdAfter) {
+        conditions.push('created_at >= ?');
+        params.push(query.createdAfter.toISOString());
+      }
 
-    if (query.createdBefore) {
-      conditions.push('created_at <= ?');
-      params.push(query.createdBefore.toISOString());
-    }
+      if (query.createdBefore) {
+        conditions.push('created_at <= ?');
+        params.push(query.createdBefore.toISOString());
+      }
 
-    let sql = 'SELECT * FROM items';
-    if (conditions.length > 0) {
-      sql += ' WHERE ' + conditions.join(' AND ');
-    }
-    sql += ' ORDER BY created_at DESC';
+      let sql = 'SELECT * FROM items';
+      if (conditions.length > 0) {
+        sql += ' WHERE ' + conditions.join(' AND ');
+      }
+      sql += ' ORDER BY created_at DESC';
 
-    const limit = query.limit ?? 100;
-    const offset = query.offset ?? 0;
-    sql += ` LIMIT ${limit} OFFSET ${offset}`;
+      // Validate and bound pagination parameters
+      let limit = query.limit ?? DEFAULT_QUERY_LIMIT;
+      let offset = query.offset ?? 0;
 
-    const stmt = this.db.prepare(sql);
-    const rows = stmt.all(...params) as ItemRow[];
+      // Enforce bounds
+      if (limit < 0) limit = DEFAULT_QUERY_LIMIT;
+      if (limit > MAX_QUERY_LIMIT) limit = MAX_QUERY_LIMIT;
+      if (offset < 0) offset = 0;
 
-    let items = rows.map(row => this.rowToItem(row));
+      sql += ` LIMIT ${limit} OFFSET ${offset}`;
 
-    // Filter by tags in memory (SQLite JSON support is limited)
-    if (query.tags && query.tags.length > 0) {
-      items = items.filter(item =>
-        item.tags && query.tags!.some(tag => item.tags!.includes(tag))
+      const stmt = this.db.prepare(sql);
+      const rows = stmt.all(...params) as ItemRow[];
+
+      let items = rows.map(row => this.rowToItem(row));
+
+      // Filter by tags in memory (SQLite JSON support is limited)
+      if (query.tags && query.tags.length > 0) {
+        items = items.filter(item =>
+          item.tags && query.tags!.some(tag => item.tags!.includes(tag))
+        );
+      }
+
+      return items;
+    } catch (err) {
+      throw new StorageError(
+        `Failed to query items: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        'queryItems',
+        err instanceof Error ? err : undefined
       );
     }
-
-    return items;
   }
 
   async deleteItem(itemId: string): Promise<void> {
-    const stmt = this.db.prepare('DELETE FROM items WHERE id = ?');
-    stmt.run(itemId);
+    try {
+      const stmt = this.db.prepare('DELETE FROM items WHERE id = ?');
+      stmt.run(itemId);
+    } catch (err) {
+      throw new StorageError(
+        `Failed to delete item ${itemId}: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        'deleteItem',
+        err instanceof Error ? err : undefined
+      );
+    }
   }
 
   private rowToItem(row: ItemRow): VaultItem {
@@ -280,12 +404,12 @@ export class SQLiteVaultStorage implements VaultStorage {
       vaultId: row.vault_id,
       itemType: row.item_type,
       title: row.title,
-      permission: row.permission ? JSON.parse(row.permission) : undefined,
+      permission: this.safeParseJSON(row.permission, 'permission', undefined),
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
       encryptedContent: row.encrypted_content,
       contentNonce: row.content_nonce,
-      tags: row.tags ? JSON.parse(row.tags) : undefined,
+      tags: this.safeParseJSON<string[] | undefined>(row.tags, 'tags', undefined),
       resourceUri: row.resource_uri,
     };
   }
