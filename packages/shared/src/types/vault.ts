@@ -130,6 +130,27 @@ export interface IdentityDocumentContent {
   notes?: string;
 }
 
+/** Messaging platform types */
+export type MessagingPlatform =
+  | 'signal'
+  | 'whatsapp'
+  | 'telegram'
+  | 'imessage'
+  | 'sms'
+  | 'email'
+  | 'matrix'
+  | 'discord'
+  | 'slack';
+
+/** Contact method with platform-specific details */
+export interface ContactMethod {
+  platform: MessagingPlatform;
+  identifier: string;  // phone number, email, username, etc.
+  isPrimary?: boolean;
+  isVerified?: boolean;
+  label?: string;  // e.g., "Personal", "Work"
+}
+
 export interface ProfileContent {
   displayName: string;
   email?: string;
@@ -144,6 +165,12 @@ export interface ProfileContent {
   };
   languagePreference: string;
   timezone: string;
+  /** Preferred messaging/contact methods */
+  contactMethods?: ContactMethod[];
+  /** Avatar/profile image reference */
+  avatarUri?: string;
+  /** Bio/about text */
+  bio?: string;
 }
 
 /** Diary/Notes vault items */
