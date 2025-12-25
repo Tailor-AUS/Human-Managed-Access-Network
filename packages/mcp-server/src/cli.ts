@@ -6,7 +6,7 @@
  */
 
 import { HmanGate } from './server.js';
-import type { AccessRequest, AccessResponse } from '@hman/core';
+import { VaultType, type AccessRequest, type AccessResponse } from '@hman/core';
 import * as readline from 'readline';
 
 // Simple CLI access request handler
@@ -112,7 +112,7 @@ async function main(): Promise<void> {
     console.error('📦 Adding demo data to vaults...');
 
     // Add profile
-    await sdk.addToVault('identity', 'profile', 'My Profile', {
+    await sdk.addToVault(VaultType.Identity, 'profile', 'My Profile', {
       displayName: 'Demo User',
       email: 'demo@hman.network',
       languagePreference: 'en',
@@ -120,7 +120,7 @@ async function main(): Promise<void> {
     });
 
     // Add some transactions
-    await sdk.addToVault('finance', 'transaction', 'Electric Bill Payment', {
+    await sdk.addToVault(VaultType.Finance, 'transaction', 'Electric Bill Payment', {
       type: 'expense',
       amount: 156.32,
       currency: 'AUD',
@@ -130,7 +130,7 @@ async function main(): Promise<void> {
       date: new Date().toISOString(),
     });
 
-    await sdk.addToVault('finance', 'transaction', 'Grocery Shopping', {
+    await sdk.addToVault(VaultType.Finance, 'transaction', 'Grocery Shopping', {
       type: 'expense',
       amount: 87.50,
       currency: 'AUD',
@@ -140,7 +140,7 @@ async function main(): Promise<void> {
     });
 
     // Add a diary entry
-    await sdk.addToVault('diary', 'entry', 'Today', {
+    await sdk.addToVault(VaultType.Diary, 'entry', 'Today', {
       date: new Date().toISOString(),
       content: 'Started testing the HMAN platform today. Exciting!',
       mood: 'excited',
@@ -148,7 +148,7 @@ async function main(): Promise<void> {
     });
 
     // Add a calendar event
-    await sdk.addToVault('calendar', 'event', 'Team Meeting', {
+    await sdk.addToVault(VaultType.Calendar, 'event', 'Team Meeting', {
       title: 'Team Meeting',
       startTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       endTime: new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString(),

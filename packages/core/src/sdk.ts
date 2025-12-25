@@ -2,7 +2,21 @@
  * HMAN SDK - High-level API for common operations
  */
 
-import { VaultType, PermissionLevel } from '@hman/shared';
+import {
+  VaultType,
+  PermissionLevel,
+  HmanFileType,
+  HmanEncryption,
+  HmanCompression,
+  type HmanVaultExportPayload,
+  type HmanExportedItem,
+  type HmanFileOptions,
+} from '@hman/shared';
+import {
+  createHmanFile,
+  parseHmanFile,
+  validateHmanFile,
+} from './file/hman-file.js';
 import { createKeyManager, KeyManager, type MasterKeyData } from './crypto/index.js';
 import { VaultManager, MemoryVaultStorage, type VaultStorage } from './vault/index.js';
 import { AuditLogger, MemoryAuditStorage, type AuditStorage } from './audit/index.js';
@@ -161,6 +175,148 @@ export class HmanSDK {
     await this.vaultManager.unlockVault(vault.id);
     const item = await this.vaultManager.getItem<T>(itemId);
     return item?.content ?? null;
+  }
+
+  /**
+   * Export a vault to a .hman file buffer
+   */
+  async exportVault(
+    vaultType: VaultType,
+    options?: {
+      password?: string;
+      compress?: boolean;
+    }
+  ): Promise<Buffer> {
+    const vault = await this.getVaultByType(vaultType);
+    if (!vault) {
+      throw new Error(`Vault not found: ${vaultType}`);
+    }
+
+    // Unlock and get all items
+    await this.vaultManager.unlockVault(vault.id);
+    const items = await this.vaultManager.getVaultItems(vault.id);
+
+    // Build payload
+    const payload: HmanVaultExportPayload = {
+      vault: {
+        id: vault.id,
+        type: vault.type,
+        name: vault.name,
+        description: vault.description,
+        defaultPermissionLevel: vault.defaultPermissionLevel,
+        createdAt: vault.createdAt.toISOString(),
+        updatedAt: vault.updatedAt.toISOString(),
+      },
+      items: items.map(item => ({
+        id: item.id,
+        type: item.itemType,
+        label: item.title,
+        data: item.content as Record<string, unknown>,
+        metadata: {
+          createdAt: item.createdAt.toISOString(),
+          updatedAt: item.updatedAt.toISOString(),
+        },
+        tags: item.tags,
+        permissionLevel: item.permission?.level,
+      })),
+    };
+
+    // Build file options
+    const fileOptions: HmanFileOptions = {
+      type: HmanFileType.VaultExport,
+      encryption: options?.password ? {
+        algorithm: HmanEncryption.AES256GCM,
+        password: options.password,
+      } : undefined,
+      compression: options?.compress ? {
+        algorithm: HmanCompression.Gzip,
+      } : undefined,
+    };
+
+    return createHmanFile(payload, fileOptions, 'hman-sdk');
+  }
+
+  /**
+   * Import a vault from a .hman file buffer
+   */
+  async importVault(
+    buffer: Buffer,
+    options?: {
+      password?: string;
+      overwrite?: boolean;
+    }
+  ): Promise<{ vaultId: string; itemCount: number }> {
+    // Validate the file first
+    const validation = validateHmanFile(buffer);
+    if (!validation.isValid) {
+      throw new Error(`Invalid .hman file: ${validation.errors.map(e => e.message).join(', ')}`);
+    }
+
+    // Parse the file
+    const parsed = await parseHmanFile<HmanVaultExportPayload>(buffer, options?.password);
+    if (!parsed.isValid || !parsed.payload) {
+      throw new Error(`Failed to parse .hman file: ${parsed.validationErrors?.join(', ')}`);
+    }
+
+    const { vault: vaultData, items } = parsed.payload;
+
+    // Check if vault already exists
+    const existingVault = await this.vaultManager.getVault(vaultData.id);
+    if (existingVault && !options?.overwrite) {
+      throw new Error(`Vault already exists: ${vaultData.name}. Use overwrite option to replace.`);
+    }
+
+    // Create or update vault
+    let vault;
+    if (existingVault && options?.overwrite) {
+      vault = existingVault;
+    } else {
+      vault = await this.vaultManager.createVault(
+        vaultData.type,
+        vaultData.name,
+        {
+          description: vaultData.description,
+          defaultPermissionLevel: vaultData.defaultPermissionLevel,
+        }
+      );
+    }
+
+    // Unlock vault and import items
+    await this.vaultManager.unlockVault(vault.id);
+
+    for (const item of items) {
+      await this.vaultManager.addItem(
+        vault.id,
+        item.type,
+        item.label,
+        item.data,
+        {
+          permissionLevel: item.permissionLevel,
+          tags: item.tags,
+        }
+      );
+    }
+
+    return {
+      vaultId: vault.id,
+      itemCount: items.length,
+    };
+  }
+
+  /**
+   * Validate a .hman file without importing it
+   */
+  validateHmanFile(buffer: Buffer): {
+    isValid: boolean;
+    errors: string[];
+    warnings: string[];
+  } {
+    const result = validateHmanFile(buffer);
+    return {
+      isValid: result.isValid,
+      errors: result.errors.map(e => e.message),
+      warnings: result.warnings.map(w => w.message),
+    };
   }
 }
 

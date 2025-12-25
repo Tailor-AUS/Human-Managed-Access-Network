@@ -10,11 +10,8 @@
 
 import {
   generateKeyPair,
-  encryptForRecipient,
-  decryptFromSender,
   encrypt,
   decrypt,
-  generateKey,
   toBase64,
   fromBase64,
   hash,
@@ -98,8 +95,8 @@ export function encryptMessage(
   // Derive session key
   const sessionKey = deriveSharedSecret(senderPrivateKey, recipientPublicKey);
 
-  // Generate ephemeral key for this message
-  const { publicKey: ephemeralPublic, privateKey: ephemeralPrivate } = generateKeyPair();
+  // Generate ephemeral key for this message (private key reserved for forward secrecy)
+  const { publicKey: ephemeralPublic, privateKey: _ephemeralPrivate } = generateKeyPair();
 
   // Encrypt the message
   const plaintextBytes = new TextEncoder().encode(plaintext);

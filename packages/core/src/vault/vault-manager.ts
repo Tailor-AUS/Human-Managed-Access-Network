@@ -9,7 +9,6 @@ import {
   type Vault,
   type VaultItem,
   type DecryptedVaultItem,
-  type VaultEncryptionMetadata,
   VaultType,
   PermissionLevel,
   buildHmanUri,

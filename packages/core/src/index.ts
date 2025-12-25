@@ -142,3 +142,15 @@ export {
   type BotMessageResponse,
   type BotStorage,
 } from './bots/index.js';
+
+// HMAN file format utilities
+export {
+  createHmanFile,
+  parseHmanFile,
+  validateHmanFile,
+  getHmanFileMetadata,
+  isHmanFile,
+  getHmanFileExtension,
+  getHmanExportFilename,
+  HmanFileError,
+} from './file/hman-file.js';

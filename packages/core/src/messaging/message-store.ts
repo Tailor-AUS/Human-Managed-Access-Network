@@ -4,7 +4,6 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import type {
-  Message,
   MessageType,
   MessageParticipant,
   Conversation,
@@ -12,8 +11,6 @@ import type {
 } from '@hman/shared';
 import {
   SessionManager,
-  encryptMessage,
-  decryptMessage,
   type EncryptedMessage,
 } from './crypto.js';
 

@@ -27,6 +27,7 @@ import {
   type RequesterInfo,
   type AccessRequest,
   type AccessResponse,
+  type AuditAction,
 } from '@hman/core';
 
 /** Error class for MCP tool errors */
@@ -587,7 +588,7 @@ export class HmanGate {
     const entries = await this.sdk.auditLogger.query({
       startTime: args.start_date ? new Date(args.start_date as string) : undefined,
       endTime: args.end_date ? new Date(args.end_date as string) : undefined,
-      actions: args.action_types as string[] | undefined,
+      actions: args.action_types as AuditAction[] | undefined,
       limit: (args.limit as number) ?? 50,
     });
 
@@ -703,7 +704,7 @@ export class HmanGate {
         if (!vault) continue;
 
         await this.sdk.vaultManager.unlockVault(vault.id);
-        const items = await this.sdk.vaultManager.listItems(vault.id);
+        const items = await this.sdk.vaultManager.getVaultItems(vault.id);
 
         for (const item of items) {
           const titleMatch = item.title.toLowerCase().includes(query.toLowerCase());
@@ -883,7 +884,7 @@ export class HmanGate {
     }
 
     await this.sdk.vaultManager.unlockVault(vault.id);
-    const items = await this.sdk.vaultManager.listItems(vault.id);
+    const items = await this.sdk.vaultManager.getVaultItems(vault.id);
 
     // Apply filters
     let filtered = items;

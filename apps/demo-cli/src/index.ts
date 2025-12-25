@@ -12,7 +12,6 @@
 import {
   createHmanSDK,
   VaultType,
-  PermissionLevel,
   type AccessRequest,
   type AccessResponse,
   type TransactionContent,

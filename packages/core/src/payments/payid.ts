@@ -194,7 +194,8 @@ export class PaymentManager {
   private provider: PaymentProvider;
   private auditLogger: AuditLogger;
   private pendingRequests: Map<string, PaymentRequest> = new Map();
-  private onApprovalRequired?: (request: PaymentRequest) => Promise<boolean>;
+  // Reserved for HITL approval integration
+  private _onApprovalRequired?: (request: PaymentRequest) => Promise<boolean>;
 
   constructor(config: {
     provider: PaymentProvider;
@@ -203,7 +204,7 @@ export class PaymentManager {
   }) {
     this.provider = config.provider;
     this.auditLogger = config.auditLogger;
-    this.onApprovalRequired = config.onApprovalRequired;
+    this._onApprovalRequired = config.onApprovalRequired;
   }
 
   /**

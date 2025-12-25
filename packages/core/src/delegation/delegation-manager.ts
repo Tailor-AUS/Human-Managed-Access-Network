@@ -8,7 +8,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import {
   type Delegation,
-  type DelegationStatus,
   type DelegateInfo,
   type DelegatedPermission,
   type DelegationCondition,
@@ -18,7 +17,6 @@ import { AuditLogger } from '../audit/index.js';
 import {
   generateKeyPair,
   encryptForRecipient,
-  decryptFromSender,
   toBase64,
   fromBase64,
 } from '../crypto/encryption.js';
@@ -66,14 +64,15 @@ export class DelegationManager {
   private storage: DelegationStorage;
   private auditLogger: AuditLogger;
   private onSendInvite?: (delegation: Delegation, encryptedKey: string) => Promise<void>;
-  private onReceiveInvite?: (delegation: Delegation) => Promise<boolean>;
+  // Reserved for future use - handles incoming delegation invites
+  private _onReceiveInvite?: (delegation: Delegation) => Promise<boolean>;
 
   constructor(config: DelegationManagerConfig) {
     this.userId = config.userId;
     this.storage = config.storage;
     this.auditLogger = config.auditLogger;
     this.onSendInvite = config.onSendInvite;
-    this.onReceiveInvite = config.onReceiveInvite;
+    this._onReceiveInvite = config.onReceiveInvite;
   }
 
   /**
