@@ -1,0 +1,32 @@
+{
+  "name": "@hman/core",
+  "version": "0.1.0",
+  "description": "Core SDK for HMAN - encryption, vault management, and key derivation",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hman/shared": "workspace:*",
+    "libsodium-wrappers-sumo": "^0.7.13",
+    "better-sqlite3": "^9.2.2",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/uuid": "^9.0.7",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  }
+}
