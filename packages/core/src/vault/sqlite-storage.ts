@@ -97,7 +97,7 @@ export class SQLiteVaultStorage implements VaultStorage {
   /**
    * Safely parse JSON with error handling
    */
-  private safeParseJSON<T>(json: string, field: string, defaultValue?: T): T {
+  private safeParseJSON<T>(json: string | null, field: string, defaultValue?: T): T {
     if (!json) {
       if (defaultValue !== undefined) return defaultValue;
       throw new StorageError(`Missing JSON data for ${field}`, 'parseJSON');

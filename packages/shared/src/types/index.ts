@@ -84,3 +84,26 @@ export {
   type HmanToolDefinition,
   DEFAULT_TOOLS,
 } from './mcp.js';
+
+// HMAN file format types
+export {
+  HMAN_FILE_MAGIC,
+  HMAN_FILE_VERSION,
+  HMAN_FILE_EXTENSION,
+  HmanFileType,
+  HmanEncryption,
+  HmanCompression,
+  HmanFileFlags,
+  HmanValidationErrorCode,
+  type HmanFileHeader,
+  type HmanVaultExportPayload,
+  type HmanExportedItem,
+  type HmanFullBackupPayload,
+  type HmanExportedDelegation,
+  type HmanExportedAuditEntry,
+  type HmanFile,
+  type HmanFileOptions,
+  type HmanFileValidation,
+  type HmanValidationError,
+  type HmanValidationWarning,
+} from './hman-file.js';
