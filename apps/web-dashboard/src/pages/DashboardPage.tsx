@@ -1,5 +1,5 @@
 import {
-  Vault,
+  Archive,
   Shield,
   Bell,
   Users,
@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 
 const stats = [
-  { label: 'Total Vaults', value: '6', icon: Vault, color: 'text-primary' },
+  { label: 'Total Vaults', value: '6', icon: Archive, color: 'text-primary' },
   { label: 'Active Delegations', value: '3', icon: Users, color: 'text-level-standard' },
   { label: 'Pending Requests', value: '2', icon: Bell, color: 'text-level-gated' },
   { label: 'Audit Entries', value: '156', icon: Shield, color: 'text-level-open' },

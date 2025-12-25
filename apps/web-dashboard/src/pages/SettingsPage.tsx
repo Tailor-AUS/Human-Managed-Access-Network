@@ -9,7 +9,6 @@ import {
   Upload,
   Trash2,
   Moon,
-  Sun,
   Globe,
   Lock,
   CheckCircle,
