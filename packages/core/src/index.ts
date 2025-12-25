@@ -108,3 +108,37 @@ export {
   seedCalendar,
   type SeederOptions,
 } from './seeder/index.js';
+
+// Delegation module
+export {
+  DelegationManager,
+  MemoryDelegationStorage,
+  type DelegationStorage,
+  type DelegationManagerConfig,
+  type CreateDelegationParams,
+} from './delegation/index.js';
+
+// Payments module
+export {
+  PaymentManager,
+  MockPaymentProvider,
+  type PaymentProvider,
+  type PaymentProviderConfig,
+  type PayIDAddress,
+  type PaymentRequest,
+  type PaymentResult,
+  type Transaction,
+} from './payments/index.js';
+
+// Bot framework
+export {
+  BotManager,
+  MemoryBotStorage,
+  createPaymentRequestMessage,
+  createStructuredMessage,
+  BOT_TEMPLATES,
+  type BotRegistration,
+  type BotMessage,
+  type BotMessageResponse,
+  type BotStorage,
+} from './bots/index.js';
