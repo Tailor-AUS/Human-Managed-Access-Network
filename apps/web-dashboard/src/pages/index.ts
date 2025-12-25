@@ -1,0 +1,6 @@
+export { DashboardPage } from './DashboardPage'
+export { VaultsPage } from './VaultsPage'
+export { RequestsPage } from './RequestsPage'
+export { AuditPage } from './AuditPage'
+export { DelegationsPage } from './DelegationsPage'
+export { SettingsPage } from './SettingsPage'
