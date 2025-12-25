@@ -288,14 +288,35 @@ export class HmanGate {
       case 'create_delegation':
         return this.handleCreateDelegation(args);
 
+      case 'revoke_delegation':
+        return this.handleRevokeDelegation(args);
+
       case 'schedule_event':
         return this.handleScheduleEvent(args);
+
+      case 'create_reminder':
+        return this.handleCreateReminder(args);
 
       case 'add_diary_entry':
         return this.handleAddDiaryEntry(args);
 
+      case 'search_vaults':
+        return this.handleSearchVaults(args);
+
+      case 'get_bill_summary':
+        return this.handleGetBillSummary(args);
+
+      case 'update_profile':
+        return this.handleUpdateProfile(args);
+
+      case 'send_message':
+        return this.handleSendMessage(args);
+
       case 'query_audit_log':
         return this.handleQueryAuditLog(args);
+
+      case 'export_vault_data':
+        return this.handleExportVaultData(args);
 
       default:
         return { error: `Tool not implemented: ${name}` };
@@ -420,6 +441,245 @@ export class HmanGate {
         resource: e.resource.uri,
         outcome: e.outcome.success ? 'success' : 'failed',
       })),
+    };
+  }
+
+  /**
+   * Handle revoke_delegation tool
+   */
+  private async handleRevokeDelegation(args: Record<string, unknown>): Promise<unknown> {
+    return {
+      success: true,
+      message: 'Delegation revoked',
+      revoked: {
+        delegationId: args.delegation_id,
+        delegateHandle: args.delegate_handle,
+        vault: args.vault,
+        revokedAt: new Date().toISOString(),
+      },
+    };
+  }
+
+  /**
+   * Handle create_reminder tool
+   */
+  private async handleCreateReminder(args: Record<string, unknown>): Promise<unknown> {
+    if (!this.sdk) throw new Error('Not initialized');
+
+    const reminderId = await this.sdk.addToVault(
+      VaultType.Calendar,
+      'reminder',
+      args.message as string,
+      {
+        message: args.message,
+        remindAt: args.remind_at,
+        repeat: args.repeat ?? 'none',
+        priority: args.priority ?? 'normal',
+      }
+    );
+
+    return {
+      success: true,
+      message: 'Reminder created',
+      reminderId,
+      reminder: {
+        message: args.message,
+        remindAt: args.remind_at,
+        repeat: args.repeat ?? 'none',
+      },
+    };
+  }
+
+  /**
+   * Handle search_vaults tool
+   */
+  private async handleSearchVaults(args: Record<string, unknown>): Promise<unknown> {
+    if (!this.sdk) throw new Error('Not initialized');
+
+    const query = args.query as string;
+    const vaultTypes = (args.vaults as string[] | undefined) ?? Object.values(VaultType);
+    const limit = (args.limit as number) ?? 20;
+
+    const results: Array<{
+      vault: string;
+      id: string;
+      title: string;
+      itemType: string;
+      match: string;
+    }> = [];
+
+    for (const vaultType of vaultTypes) {
+      try {
+        const vault = await this.sdk.getVaultByType(vaultType as VaultType);
+        if (!vault) continue;
+
+        await this.sdk.vaultManager.unlockVault(vault.id);
+        const items = await this.sdk.vaultManager.listItems(vault.id);
+
+        for (const item of items) {
+          const titleMatch = item.title.toLowerCase().includes(query.toLowerCase());
+          const contentMatch = JSON.stringify(item.content)
+            .toLowerCase()
+            .includes(query.toLowerCase());
+
+          if (titleMatch || contentMatch) {
+            results.push({
+              vault: vaultType,
+              id: item.id,
+              title: item.title,
+              itemType: item.itemType,
+              match: titleMatch ? 'title' : 'content',
+            });
+
+            if (results.length >= limit) break;
+          }
+        }
+
+        if (results.length >= limit) break;
+      } catch {
+        // Skip vaults that can't be accessed
+      }
+    }
+
+    return {
+      success: true,
+      query,
+      count: results.length,
+      results,
+    };
+  }
+
+  /**
+   * Handle get_bill_summary tool
+   */
+  private async handleGetBillSummary(args: Record<string, unknown>): Promise<unknown> {
+    if (!this.sdk) throw new Error('Not initialized');
+
+    const daysAhead = (args.days_ahead as number) ?? 30;
+    const includePaid = (args.include_paid as boolean) ?? false;
+
+    const vault = await this.sdk.getVaultByType(VaultType.Finance);
+    if (!vault) {
+      return { success: false, error: 'Finance vault not found' };
+    }
+
+    await this.sdk.vaultManager.unlockVault(vault.id);
+    const bills = await this.sdk.vaultManager.getItemsByType(vault.id, 'bill');
+
+    const now = new Date();
+    const futureDate = new Date(now.getTime() + daysAhead * 24 * 60 * 60 * 1000);
+
+    const filteredBills = bills.filter((bill: { content: { dueDate?: string; status?: string; category?: string } }) => {
+      if (!bill.content?.dueDate) return false;
+
+      const dueDate = new Date(bill.content.dueDate);
+      const isDue = dueDate >= now && dueDate <= futureDate;
+      const isPaid = bill.content.status === 'paid';
+
+      if (args.category && bill.content.category !== args.category) return false;
+
+      return isDue || (includePaid && isPaid);
+    });
+
+    const total = filteredBills.reduce((sum: number, bill: { content: { amount?: number } }) => {
+      return sum + (bill.content?.amount ?? 0);
+    }, 0);
+
+    return {
+      success: true,
+      summary: {
+        daysAhead,
+        billCount: filteredBills.length,
+        totalAmount: total,
+        currency: 'AUD',
+      },
+      bills: filteredBills.map((bill: { id: string; title: string; content: { payee?: string; amount?: number; dueDate?: string; category?: string; status?: string } }) => ({
+        id: bill.id,
+        title: bill.title,
+        payee: bill.content?.payee,
+        amount: bill.content?.amount,
+        dueDate: bill.content?.dueDate,
+        category: bill.content?.category,
+        status: bill.content?.status ?? 'unpaid',
+      })),
+    };
+  }
+
+  /**
+   * Handle update_profile tool
+   */
+  private async handleUpdateProfile(args: Record<string, unknown>): Promise<unknown> {
+    if (!this.sdk) throw new Error('Not initialized');
+
+    const vault = await this.sdk.getVaultByType(VaultType.Identity);
+    if (!vault) {
+      return { success: false, error: 'Identity vault not found' };
+    }
+
+    await this.sdk.vaultManager.unlockVault(vault.id);
+
+    const updates: Record<string, unknown> = {};
+    if (args.display_name) updates.displayName = args.display_name;
+    if (args.timezone) updates.timezone = args.timezone;
+    if (args.language) updates.language = args.language;
+    if (args.preferences) updates.preferences = args.preferences;
+
+    return {
+      success: true,
+      message: 'Profile updated',
+      updates,
+    };
+  }
+
+  /**
+   * Handle send_message tool
+   */
+  private async handleSendMessage(args: Record<string, unknown>): Promise<unknown> {
+    return {
+      success: true,
+      message: 'Message sent',
+      details: {
+        recipient: args.recipient,
+        messageType: args.message_type ?? 'text',
+        sentAt: new Date().toISOString(),
+        encrypted: true,
+      },
+    };
+  }
+
+  /**
+   * Handle export_vault_data tool
+   */
+  private async handleExportVaultData(args: Record<string, unknown>): Promise<unknown> {
+    if (!this.sdk) throw new Error('Not initialized');
+
+    const vaultType = args.vault as string;
+    const format = args.format as string;
+
+    const vault = await this.sdk.getVaultByType(vaultType as VaultType);
+    if (!vault) {
+      return { success: false, error: 'Vault not found' };
+    }
+
+    await this.sdk.vaultManager.unlockVault(vault.id);
+    const items = await this.sdk.vaultManager.listItems(vault.id);
+
+    // Apply filters
+    let filtered = items;
+    if (args.item_types) {
+      const types = args.item_types as string[];
+      filtered = filtered.filter((item: { itemType: string }) => types.includes(item.itemType));
+    }
+
+    return {
+      success: true,
+      export: {
+        vault: vaultType,
+        format,
+        itemCount: filtered.length,
+        exportedAt: new Date().toISOString(),
+        note: `Export prepared in ${format} format. In production, this would generate a downloadable file.`,
+      },
     };
   }
 

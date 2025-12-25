@@ -251,6 +251,29 @@ export const DEFAULT_TOOLS: HmanToolDefinition[] = [
     requiresConfirmation: true,
   },
   {
+    name: 'revoke_delegation',
+    description: 'Revoke an existing delegation, immediately removing the delegates access.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        delegation_id: {
+          type: 'string',
+          description: 'ID of the delegation to revoke',
+        },
+        delegate_handle: {
+          type: 'string',
+          description: 'HMAN handle of the delegate (alternative to delegation_id)',
+        },
+        vault: {
+          type: 'string',
+          description: 'Vault to revoke access from (required if using delegate_handle)',
+        },
+      },
+    },
+    permissionLevel: PermissionLevel.Gated,
+    requiresConfirmation: true,
+  },
+  {
     name: 'schedule_event',
     description: 'Add an event to the user calendar. Standard permission level - user will be notified but approval is not required.',
     inputSchema: {
@@ -276,8 +299,49 @@ export const DEFAULT_TOOLS: HmanToolDefinition[] = [
           type: 'string',
           description: 'Event location',
         },
+        recurrence: {
+          type: 'string',
+          description: 'Recurrence rule (daily, weekly, monthly, yearly)',
+        },
+        reminders: {
+          type: 'array',
+          items: { type: 'number' },
+          description: 'Reminder times in minutes before event',
+        },
       },
       required: ['title', 'start_time', 'end_time'],
+    },
+    permissionLevel: PermissionLevel.Standard,
+    requiresConfirmation: false,
+  },
+  {
+    name: 'create_reminder',
+    description: 'Create a reminder that will notify the user at a specific time.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          description: 'Reminder message',
+        },
+        remind_at: {
+          type: 'string',
+          description: 'When to remind in ISO 8601 format',
+        },
+        repeat: {
+          type: 'string',
+          enum: ['none', 'daily', 'weekly', 'monthly'],
+          description: 'Repeat interval',
+          default: 'none',
+        },
+        priority: {
+          type: 'string',
+          enum: ['low', 'normal', 'high'],
+          description: 'Priority level',
+          default: 'normal',
+        },
+      },
+      required: ['message', 'remind_at'],
     },
     permissionLevel: PermissionLevel.Standard,
     requiresConfirmation: false,
@@ -312,6 +376,127 @@ export const DEFAULT_TOOLS: HmanToolDefinition[] = [
     requiresConfirmation: false,
   },
   {
+    name: 'search_vaults',
+    description: 'Search across user vaults for matching content. Returns items that match the query.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Search query string',
+        },
+        vaults: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Specific vaults to search (defaults to all accessible vaults)',
+        },
+        item_types: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Filter by item types',
+        },
+        date_range: {
+          type: 'object',
+          properties: {
+            start: { type: 'string' },
+            end: { type: 'string' },
+          },
+          description: 'Date range filter',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum results to return',
+          default: 20,
+        },
+      },
+      required: ['query'],
+    },
+    permissionLevel: PermissionLevel.Standard,
+    requiresConfirmation: false,
+  },
+  {
+    name: 'get_bill_summary',
+    description: 'Get a summary of upcoming bills and payment obligations from the Finance vault.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        days_ahead: {
+          type: 'number',
+          description: 'Number of days to look ahead for due bills',
+          default: 30,
+        },
+        include_paid: {
+          type: 'boolean',
+          description: 'Include recently paid bills',
+          default: false,
+        },
+        category: {
+          type: 'string',
+          description: 'Filter by bill category (utilities, subscriptions, etc.)',
+        },
+      },
+    },
+    permissionLevel: PermissionLevel.Gated,
+    requiresConfirmation: false,
+  },
+  {
+    name: 'update_profile',
+    description: 'Update user profile information in the Identity vault.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        display_name: {
+          type: 'string',
+          description: 'Display name',
+        },
+        timezone: {
+          type: 'string',
+          description: 'Timezone (e.g., Australia/Sydney)',
+        },
+        language: {
+          type: 'string',
+          description: 'Preferred language code (e.g., en-AU)',
+        },
+        preferences: {
+          type: 'object',
+          description: 'Additional preferences',
+        },
+      },
+    },
+    permissionLevel: PermissionLevel.Standard,
+    requiresConfirmation: false,
+  },
+  {
+    name: 'send_message',
+    description: 'Send an end-to-end encrypted message to another HMAN user or bot.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        recipient: {
+          type: 'string',
+          description: 'HMAN handle or bot ID of the recipient',
+        },
+        message: {
+          type: 'string',
+          description: 'Message content',
+        },
+        message_type: {
+          type: 'string',
+          enum: ['text', 'payment_request', 'action_request'],
+          description: 'Type of message',
+          default: 'text',
+        },
+        metadata: {
+          type: 'object',
+          description: 'Additional metadata for the message',
+        },
+      },
+      required: ['recipient', 'message'],
+    },
+    permissionLevel: PermissionLevel.Standard,
+    requiresConfirmation: false,
+  },
+  {
     name: 'query_audit_log',
     description: 'Query the local audit log to see what data has been accessed and by whom.',
     inputSchema: {
@@ -330,6 +515,14 @@ export const DEFAULT_TOOLS: HmanToolDefinition[] = [
           items: { type: 'string' },
           description: 'Filter by action types',
         },
+        actor: {
+          type: 'string',
+          description: 'Filter by actor name or ID',
+        },
+        resource: {
+          type: 'string',
+          description: 'Filter by resource URI pattern',
+        },
         limit: {
           type: 'number',
           description: 'Maximum number of entries to return',
@@ -339,6 +532,46 @@ export const DEFAULT_TOOLS: HmanToolDefinition[] = [
     },
     permissionLevel: PermissionLevel.Standard,
     requiresConfirmation: false,
+  },
+  {
+    name: 'export_vault_data',
+    description: 'Export data from a vault in a specified format. Requires user confirmation.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        vault: {
+          type: 'string',
+          description: 'Vault to export from',
+        },
+        format: {
+          type: 'string',
+          enum: ['json', 'csv', 'pdf'],
+          description: 'Export format',
+          default: 'json',
+        },
+        item_types: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Specific item types to export',
+        },
+        date_range: {
+          type: 'object',
+          properties: {
+            start: { type: 'string' },
+            end: { type: 'string' },
+          },
+          description: 'Date range filter',
+        },
+        include_metadata: {
+          type: 'boolean',
+          description: 'Include item metadata',
+          default: true,
+        },
+      },
+      required: ['vault', 'format'],
+    },
+    permissionLevel: PermissionLevel.Gated,
+    requiresConfirmation: true,
   },
 ];
 
