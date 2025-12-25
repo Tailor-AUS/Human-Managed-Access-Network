@@ -75,11 +75,20 @@ const mockRequests: AccessRequest[] = [
   },
 ];
 
-export function HomeScreen() {
+interface HomeScreenProps {
+  onVaultPress?: (vault: Vault) => void;
+  onSettingsPress?: () => void;
+}
+
+export function HomeScreen({ onVaultPress, onSettingsPress }: HomeScreenProps) {
   const pendingRequests = mockRequests.filter(r => r.status === 'pending');
 
   const handleVaultPress = (vault: Vault) => {
-    console.log('Open vault:', vault.name);
+    if (onVaultPress) {
+      onVaultPress(vault);
+    } else {
+      console.log('Open vault:', vault.name);
+    }
   };
 
   const handleApprove = (request: AccessRequest) => {
@@ -88,6 +97,14 @@ export function HomeScreen() {
 
   const handleDeny = (request: AccessRequest) => {
     console.log('Denied:', request.id);
+  };
+
+  const handleSettingsPress = () => {
+    if (onSettingsPress) {
+      onSettingsPress();
+    } else {
+      console.log('Open settings');
+    }
   };
 
   return (
@@ -99,7 +116,7 @@ export function HomeScreen() {
             <Text style={styles.greeting}>Welcome back</Text>
             <Text style={styles.title}>Your Vaults</Text>
           </View>
-          <TouchableOpacity style={styles.settingsButton}>
+          <TouchableOpacity style={styles.settingsButton} onPress={handleSettingsPress}>
             <Ionicons name="settings-outline" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
