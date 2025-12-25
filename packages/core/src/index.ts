@@ -96,6 +96,14 @@ export {
   type Session,
   type MessageStoreConfig,
   type StoredMessage,
+  // Signal integration
+  SignalService,
+  createSignalService,
+  HmanSignalBridge,
+  type SignalMessage,
+  type SignalAttachment,
+  type SignalConfig,
+  type SignalRegistration,
 } from './messaging/index.js';
 
 // Demo data seeder

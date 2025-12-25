@@ -19,3 +19,14 @@ export {
   type MessageStoreConfig,
   type StoredMessage,
 } from './message-store.js';
+
+// Signal integration
+export {
+  SignalService,
+  createSignalService,
+  HmanSignalBridge,
+  type SignalMessage,
+  type SignalAttachment,
+  type SignalConfig,
+  type SignalRegistration,
+} from './signal.js';
