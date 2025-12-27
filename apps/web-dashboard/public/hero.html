@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HMAN - Your Data. Your Rules. Any AI.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 50%, #0a1a2e 100%);
+      min-height: 100vh;
+      color: #fff;
+      overflow-x: hidden;
+    }
+
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      position: relative;
+    }
+
+    /* Animated background */
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 20% 30%, rgba(139, 92, 246, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 80% 70%, rgba(6, 182, 212, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.1) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    /* Floating particles */
+    .particles {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .particle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: rgba(139, 92, 246, 0.6);
+      border-radius: 50%;
+      animation: float 15s infinite;
+    }
+
+    .particle:nth-child(2) { left: 20%; animation-delay: 2s; background: rgba(6, 182, 212, 0.6); }
+    .particle:nth-child(3) { left: 40%; animation-delay: 4s; }
+    .particle:nth-child(4) { left: 60%; animation-delay: 6s; background: rgba(6, 182, 212, 0.6); }
+    .particle:nth-child(5) { left: 80%; animation-delay: 8s; }
+    .particle:nth-child(6) { left: 90%; animation-delay: 10s; background: rgba(6, 182, 212, 0.6); }
+
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(100vh) scale(0);
+        opacity: 0;
+      }
+      10% {
+        opacity: 1;
+        transform: translateY(90vh) scale(1);
+      }
+      90% {
+        opacity: 1;
+        transform: translateY(10vh) scale(1);
+      }
+      100% {
+        transform: translateY(0) scale(0);
+        opacity: 0;
+      }
+    }
+
+    .content {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      max-width: 900px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .logo-icon {
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      box-shadow: 0 10px 40px rgba(139, 92, 246, 0.4);
+    }
+
+    .logo-text {
+      font-size: 2rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .tagline {
+      font-size: 3.5rem;
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 1.5rem;
+      background: linear-gradient(135deg, #fff 0%, #a5b4fc 50%, #06b6d4 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      font-size: 1.25rem;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 3rem;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* AI Icons Orbit */
+    .orbit-container {
+      position: relative;
+      width: 300px;
+      height: 300px;
+      margin: 2rem auto;
+    }
+
+    .center-shield {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 100px;
+      height: 100px;
+      background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      box-shadow: 
+        0 0 60px rgba(139, 92, 246, 0.5),
+        0 0 100px rgba(6, 182, 212, 0.3);
+      animation: pulse 3s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 60px rgba(139, 92, 246, 0.5), 0 0 100px rgba(6, 182, 212, 0.3); }
+      50% { box-shadow: 0 0 80px rgba(139, 92, 246, 0.7), 0 0 120px rgba(6, 182, 212, 0.5); }
+    }
+
+    .ai-orbit {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      animation: orbit 20s linear infinite;
+    }
+
+    @keyframes orbit {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .ai-node {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      color: rgba(255, 255, 255, 0.8);
+      animation: counter-orbit 20s linear infinite;
+    }
+
+    @keyframes counter-orbit {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(-360deg); }
+    }
+
+    .ai-node:nth-child(1) { top: 0; left: 50%; transform: translateX(-50%); }
+    .ai-node:nth-child(2) { top: 50%; right: 0; transform: translateY(-50%); }
+    .ai-node:nth-child(3) { bottom: 0; left: 50%; transform: translateX(-50%); }
+    .ai-node:nth-child(4) { top: 50%; left: 0; transform: translateY(-50%); }
+
+    /* QR Code Section */
+    .qr-section {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2rem;
+      margin-top: 3rem;
+      padding: 2rem;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+    }
+
+    .qr-code {
+      width: 150px;
+      height: 150px;
+      background: #fff;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+    }
+
+    .qr-code img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .qr-placeholder {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(45deg, #1a1a2e 25%, transparent 25%),
+                  linear-gradient(-45deg, #1a1a2e 25%, transparent 25%),
+                  linear-gradient(45deg, transparent 75%, #1a1a2e 75%),
+                  linear-gradient(-45deg, transparent 75%, #1a1a2e 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+      border-radius: 8px;
+    }
+
+    .qr-text {
+      text-align: left;
+    }
+
+    .qr-text h3 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .qr-text p {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .signal-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: rgba(59, 130, 246, 0.2);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      border-radius: 100px;
+      font-size: 0.875rem;
+      color: #60a5fa;
+    }
+
+    /* Features */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      margin-top: 3rem;
+    }
+
+    .feature {
+      padding: 1.5rem;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      text-align: left;
+      transition: all 0.3s ease;
+    }
+
+    .feature:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: translateY(-4px);
+    }
+
+    .feature-icon {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .feature h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .feature p {
+      font-size: 0.875rem;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    @media (max-width: 768px) {
+      .tagline {
+        font-size: 2.5rem;
+      }
+
+      .features {
+        grid-template-columns: 1fr;
+      }
+
+      .qr-section {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .qr-text {
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section class="hero">
+    <div class="particles">
+      <div class="particle"></div>
+      <div class="particle"></div>
+      <div class="particle"></div>
+      <div class="particle"></div>
+      <div class="particle"></div>
+      <div class="particle"></div>
+    </div>
+
+    <div class="content">
+      <div class="logo">
+        <div class="logo-icon">🛡️</div>
+        <span class="logo-text">HMAN</span>
+      </div>
+
+      <h1 class="tagline">Your data.<br>Your rules.<br>Any AI.</h1>
+      
+      <p class="subtitle">
+        HMAN is your personal data representative — an LLM-agnostic layer that ensures 
+        every AI must ask <strong>you</strong> before accessing <strong>your</strong> data.
+      </p>
+
+      <div class="orbit-container">
+        <div class="ai-orbit">
+          <div class="ai-node">🤖</div>
+          <div class="ai-node">✨</div>
+          <div class="ai-node">🧠</div>
+          <div class="ai-node">⚡</div>
+        </div>
+        <div class="center-shield">👤</div>
+      </div>
+
+      <div class="qr-section">
+        <div class="qr-code">
+          <!-- Replace with actual Signal QR code -->
+          <div class="qr-placeholder"></div>
+        </div>
+        <div class="qr-text">
+          <h3>Connect via Signal</h3>
+          <p>Scan to add HMAN to your contacts.<br>Control AI access from your phone.</p>
+          <span class="signal-badge">
+            🔐 E2E Encrypted via Signal Protocol
+          </span>
+        </div>
+      </div>
+
+      <div class="features">
+        <div class="feature">
+          <div class="feature-icon">🔐</div>
+          <h4>Human In The Loop</h4>
+          <p>Every AI request requires your approval. Always.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">🤖</div>
+          <h4>LLM Agnostic</h4>
+          <p>Works with Claude, GPT, Gemini, or any future AI.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">📱</div>
+          <h4>Signal-First</h4>
+          <p>Approve requests via secure Signal messages.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</body>
+</html>
