@@ -1,55 +1,95 @@
 # Human Managed Access Network (HMAN)
 
-**Privacy-first platform for sovereign control over your digital context.**
+> **Your data. Your rules. Any AI.**
 
-HMAN is a non-profit platform that gives users complete control over their digital data. Built on Anthropic's [Model Context Protocol (MCP)](https://modelcontextprotocol.io/), HMAN acts as the secure bridge between your encrypted data vaults and connected AI systems—ensuring that **humans always remain in control** of what AI can see and do.
+HMAN is your **personal data representative** — an LLM-agnostic layer that ensures every AI must ask **you** before accessing **your** data or acting on **your** behalf.
+
+📖 **[Read the full Vision →](./VISION.md)**
+
+---
+
+## The Core Idea
+
+```
+                              YOU
+                               │
+                               │ 100% Control
+                               ▼
+                    ┌─────────────────────┐
+                    │                     │
+                    │        HMAN         │
+                    │   Your Digital      │
+                    │   Representative    │
+                    │                     │
+                    └──────────┬──────────┘
+                               │
+           ┌───────────────────┼───────────────────┐
+           │                   │                   │
+           ▼                   ▼                   ▼
+     ┌──────────┐       ┌──────────┐       ┌──────────┐
+     │  Claude  │       │  Gemini  │       │  GPT-X   │     Any AI
+     │ Anthropic│       │  Google  │       │  OpenAI  │
+     └──────────┘       └──────────┘       └──────────┘
+```
+
+## Why HMAN?
+
+| Without HMAN | With HMAN |
+|--------------|-----------|
+| AI has your data | **You** have your data |
+| AI decides what to access | **You** decide what to share |
+| Different rules per AI | **One place** to control all |
+| Vendor lock-in | **LLM agnostic** — switch freely |
+| Trust the AI company | **Trust yourself** |
 
 ## Core Principles
 
-| Principle | Implementation |
-|-----------|----------------|
-| **Human-managed** | Every AI access request requires explicit human approval (or pre-configured delegation) |
-| **Access-controlled** | Tiered permissions with cryptographic enforcement—not policy promises |
-| **Networked** | Connect to any MCP-compatible AI, plus E2EE messaging with humans and bots |
-| **Zero-access architecture** | Operators cannot decrypt user data, even under legal compulsion |
+| Principle | Description |
+|-----------|-------------|
+| 🔐 **Human In The Loop** | Every AI access request requires your explicit approval |
+| 🤖 **LLM Agnostic** | Works with Claude, GPT, Gemini, Llama, or any future AI |
+| 📱 **Signal-First** | Control everything via secure Signal messages |
+| ⚡ **Task Execution** | AIs can act on your behalf — with your approval |
+| 🛡️ **Zero Knowledge** | HMAN is a broker, not a vault — your data stays yours |
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      HMAN Client (Device)                   │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌──────────────┐   ┌──────────────┐   ┌────────────────┐  │
-│  │   Vaults     │   │  HMAN Gate   │   │  E2EE Messaging │  │
-│  │  (Encrypted) │◄──┤  (MCP Server)│   │  (Signal Proto) │  │
-│  └──────────────┘   └──────┬───────┘   └───────┬────────┘  │
-│                            │                    │           │
-│         ┌──────────────────┼────────────────────┤           │
-│         │                  │                    │           │
-│         ▼                  ▼                    ▼           │
-│  ┌─────────────┐   ┌─────────────┐      ┌─────────────┐    │
-│  │ HITL Control│   │ Delegation  │      │ Audit Log   │    │
-│  │   Engine    │   │   Manager   │      │  (Local)    │    │
-│  └─────────────┘   └─────────────┘      └─────────────┘    │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-         │ MCP                              │ E2EE
-         ▼                                  ▼
-  ┌─────────────────┐               ┌─────────────────┐
-  │ Claude / Grok   │               │ Utility Bots    │
-  │ GPT / Llama     │               │ Payment Requests│
-  └─────────────────┘               └─────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           HMAN PLATFORM                                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│    ┌─────────────┐       ┌──────────────────┐       ┌──────────────────┐   │
+│    │   Claude    │       │                  │       │                  │   │
+│    │   Gemini    │◀─────▶│   HMAN Service   │◀─────▶│   User's Phone   │   │
+│    │   GPT-4     │  MCP  │                  │Signal │   📱             │   │
+│    │   etc.      │       └────────┬─────────┘       └──────────────────┘   │
+│    └─────────────┘                │                                        │
+│                                   │                                        │
+│                          ┌────────▼────────┐       ┌──────────────────┐   │
+│                          │  Task Executor  │       │  User's Data     │   │
+│                          │  • Payments     │       │  (Note to Self)  │   │
+│                          │  • Bookings     │       │  • Encrypted     │   │
+│                          │  • Actions      │       │  • User-owned    │   │
+│                          └─────────────────┘       └──────────────────┘   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Permission Levels (The "Gate" System)
+**Data Flow:**
+1. AI requests access/action via MCP
+2. HMAN forwards to user via Signal: *"Claude wants your calendar. Y/N?"*
+3. User replies in Signal: *"Y"* or *"N"*
+4. HMAN executes (if approved) and confirms
+
+## Permission Levels
 
 | Level | Name | Behaviour | Example Data |
 |-------|------|-----------|--------------|
-| 0 | **Open** | Auto-shared with any connected AI | Display name, language preference |
-| 1 | **Standard** | Shared with logging; user notified post-hoc | Calendar, general notes |
-| 2 | **Gated** | Requires tap-to-approve; push notification | Financial transactions, health records |
-| 3 | **Locked** | Never shared via MCP; manual copy only | Passwords, private keys, legal documents |
+| 🟢 | **Open** | Auto-shared with any connected AI | Display name, language |
+| 🟡 | **Standard** | Shared with logging; user notified | Calendar, general notes |
+| 🟠 | **Gated** | Requires approval each time | Financial, health records |
+| 🔴 | **Locked** | Never shared; manual only | Passwords, private keys |
 
 ## Quick Start
 
@@ -75,7 +115,7 @@ pnpm build
 ### Run the Demo
 
 ```bash
-# Run the interactive demo
+# Run the interactive demo (creates .hman file)
 pnpm dev:demo
 ```
 
@@ -84,6 +124,25 @@ This demonstrates:
 - Tiered permission levels
 - Access control with human-in-the-loop
 - Audit logging with integrity verification
+
+### Signal-First Interface (Recommended)
+
+HMAN is designed to be controlled entirely via Signal messaging - no web dashboard needed!
+
+```bash
+# Set up Signal (requires signal-cli + Java 21)
+pnpm --filter @hman/demo-cli signal
+
+# Run Signal-first interface
+pnpm --filter @hman/demo-cli signal:first
+```
+
+Once running, control HMAN by sending messages to yourself:
+- **STATUS** - Check vault status
+- **VAULTS** - List your vaults
+- **PENDING** - See access requests
+- **APPROVE** / **DENY** - Respond to AI requests
+- **HELP** - All available commands
 
 ### Run the MCP Server
 

@@ -1,8 +1,22 @@
 /**
  * HMAN Gate - MCP Server Implementation
  *
- * This is the local MCP server that mediates all AI access to user data.
- * It implements Anthropic's Model Context Protocol with HMAN's tiered permissions.
+ * This is the LLM-agnostic MCP server that mediates ALL AI access to user data.
+ * 
+ * THE VISION:
+ * "Your data. Your rules. Any AI."
+ * 
+ * HMAN Gate ensures:
+ * - Every AI must ASK before accessing your data
+ * - YOU decide what to share (via Signal)
+ * - Works with ANY AI: Claude, GPT, Gemini, Llama, etc.
+ * - Human in the loop - ALWAYS
+ * 
+ * When an AI requests access:
+ * 1. Request comes through MCP
+ * 2. HMAN forwards to user via Signal (if Gated/Locked)
+ * 3. User replies Y/N
+ * 4. HMAN returns data or denial
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';

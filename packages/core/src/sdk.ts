@@ -1,5 +1,15 @@
 /**
- * HMAN SDK - High-level API for common operations
+ * HMAN SDK - Your Personal Data Representative
+ * 
+ * "Your data. Your rules. Any AI."
+ * 
+ * The SDK provides core functionality for:
+ * - Encrypted vault management (your data stays yours)
+ * - Tiered permission levels (Open, Standard, Gated, Locked)
+ * - Access control gate (human in the loop - always)
+ * - Audit logging (know who accessed what, when)
+ * 
+ * This SDK is LLM-agnostic - it works with ANY AI through MCP.
  */
 
 import {

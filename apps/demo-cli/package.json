@@ -7,7 +7,8 @@
   "main": "./dist/index.js",
   "bin": {
     "hman-demo": "./dist/index.js",
-    "hman-signal": "./dist/signal-setup.js"
+    "hman-signal": "./dist/signal-setup.js",
+    "hman-signal-first": "./dist/signal-first-demo.js"
   },
   "scripts": {
     "build": "tsc",
@@ -16,7 +17,9 @@
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "signal": "tsx src/signal-setup.ts",
-    "signal:setup": "node dist/signal-setup.js"
+    "signal:setup": "node dist/signal-setup.js",
+    "signal:first": "tsx src/signal-first-demo.ts",
+    "signal:first:start": "node dist/signal-first-demo.js"
   },
   "dependencies": {
     "@hman/core": "workspace:*",
