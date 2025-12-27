@@ -190,3 +190,14 @@ export {
   type ExecutionResult,
   type TaskExecutor,
 } from './services/index.js';
+
+// Authenticity module - Proof of Human
+export {
+  HmanAuthenticity,
+  SignatureRegistry,
+  demonstrateAuthenticity,
+  type HmanSignature,
+  type HmanBadge,
+  type VerificationResult,
+} from './authenticity/index.js';
+
