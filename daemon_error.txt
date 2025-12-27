@@ -2,3 +2,9 @@ INFO  DaemonCommand - Starting daemon in single-account mode for +61420309085
 INFO  SocketHandler - Started JSON-RPC server on C:\Users\knoxh\AppData\Local\Temp\signal-cli\socket
 WARN  RefreshRecipientsJob - Full CDSI recipients refresh failed, ignoring: org.signal.libsignal.net.NetworkProtocolException: HTTP error: 404 Not Found (IOException)
 WARN  ReceiveHelper - Connection closed unexpectedly, reconnecting in 100 ms
+WARN  ReceiveHelper - Connection closed unexpectedly, reconnecting in 100 ms
+WARN  ReceiveHelper - Connection closed unexpectedly, reconnecting in 100 ms
+WARN  ReceiveHelper - Connection closed unexpectedly, reconnecting in 100 ms
+WARN  ReceiveHelper - Connection closed unexpectedly, reconnecting in 100 ms
+WARN  ReceiveHelper - Connection closed unexpectedly, reconnecting in 100 ms
+WARN  ReceiveHelper - Connection closed unexpectedly, reconnecting in 100 ms
