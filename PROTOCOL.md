@@ -4,7 +4,38 @@
 
 ---
 
-## What Is It?
+## The Protocol Stack
+
+The .HMAN Protocol defines how .HMANs communicate securely:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│                    .HMAN PROTOCOL                           │
+│                                                             │
+│   ┌─────────────────────────────────────────────────────┐   │
+│   │  LAYER 1: E2E ENCRYPTION (Signal Protocol)          │   │
+│   │  Every message encrypted end-to-end                 │   │
+│   └─────────────────────────────────────────────────────┘   │
+│                           +                                 │
+│   ┌─────────────────────────────────────────────────────┐   │
+│   │  LAYER 2: VPN (Your chosen provider)                │   │
+│   │  Location anonymity, network privacy                │   │
+│   └─────────────────────────────────────────────────────┘   │
+│                           +                                 │
+│   ┌─────────────────────────────────────────────────────┐   │
+│   │  LAYER 3: SIGNAL INTERFACE                          │   │
+│   │  Human-readable messages, simple Y/N responses      │   │
+│   └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│   = THE STANDARD FOR .HMAN TO .HMAN COMMUNICATION          │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## What Is a .HMAN?
 
 .HMAN (dot-H-man) is:
 
