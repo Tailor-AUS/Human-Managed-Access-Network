@@ -104,6 +104,15 @@ export {
   type SignalAttachment,
   type SignalConfig,
   type SignalRegistration,
+  // Signal CLI Interface
+  HmanSignalInterface,
+  createSignalInterface,
+  type HmanCommand,
+  type ParsedCommand,
+  type HmanStatus,
+  type PendingRequest,
+  type VaultSummary,
+  type ActivityEntry,
 } from './messaging/index.js';
 
 // Demo data seeder
@@ -162,3 +171,22 @@ export {
   getHmanExportFilename,
   HmanFileError,
 } from './file/hman-file.js';
+
+// HMAN Service - Signal-based AI broker
+export {
+  HmanService,
+  createHmanService,
+  PaymentExecutor,
+  BookingExecutor,
+  type HmanUser,
+  type ConnectedLLM,
+  type LLMPermissions,
+  type UserPreferences,
+  type UserProfile,
+  type PaymentMethod,
+  type Address,
+  type TaskRequest,
+  type TaskResponse,
+  type ExecutionResult,
+  type TaskExecutor,
+} from './services/index.js';
