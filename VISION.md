@@ -1,154 +1,230 @@
 # HMAN Vision
 
-## Your Personal Data Representative
+> **Your secrets stay hidden. Train any AI.**
 
-**HMAN (Human Managed Access Network) is your digital representative that ensures ANY AI, from ANY company, must ask YOU before accessing YOUR data or acting on YOUR behalf.**
+---
+
+## What is HMAN?
+
+HMAN (.hman) is a protocol that lets you:
+1. **Store your personal data** in Signal's Note to Self (encrypted, private, yours)
+2. **Connect any AI** (Claude, GPT, Gemini, your own models)
+3. **Approve what gets shared** via simple text messages
+
+**Barrier to entry: Just have Signal.**
 
 ---
 
 ## The Problem
 
-In the current AI landscape:
+Today, when you use AI:
+- You give your data to every AI company separately
+- Your credit card goes to OpenAI, Anthropic, Google, Microsoft...
+- Your medical records, calendar, contacts - scattered everywhere
+- No way to know what AI has accessed
+- No way to revoke access
 
-- 🔴 **AI has your data** — You upload documents, chat histories, emails to AI services
-- 🔴 **AI decides access** — Each AI platform has its own rules about what it can see
-- 🔴 **Vendor lock-in** — Your data is scattered across Claude, ChatGPT, Gemini, etc.
-- 🔴 **No unified control** — Different privacy settings for each service
-- 🔴 **Trust the company** — You hope they handle your data correctly
-
-## The HMAN Solution
-
-```
-                              YOU
-                               │
-                               │ 100% Control
-                               ▼
-                    ┌─────────────────────┐
-                    │                     │
-                    │        HMAN         │
-                    │                     │
-                    │   Your Digital      │
-                    │   Representative    │
-                    │                     │
-                    └──────────┬──────────┘
-                               │
-           ┌───────────────────┼───────────────────┐
-           │                   │                   │
-           ▼                   ▼                   ▼
-     ┌──────────┐       ┌──────────┐       ┌──────────┐
-     │  Claude  │       │  Gemini  │       │  GPT-X   │       ...
-     │ Anthropic│       │  Google  │       │  OpenAI  │       Any AI
-     └──────────┘       └──────────┘       └──────────┘
-```
-
-- 🟢 **You have your data** — Stored encrypted, under your control
-- 🟢 **You decide access** — Every request requires your approval
-- 🟢 **LLM agnostic** — Works with any AI, switch freely
-- 🟢 **One place to control all** — Single interface for all AI permissions
-- 🟢 **Trust yourself** — You see every request, every decision
-
----
-
-## Core Principles
-
-### 1. Human In The Loop — Always
-
-No AI can access your data or act on your behalf without your explicit approval. Not sometimes. **Always.**
+## The Solution
 
 ```
-AI Request → HMAN → You (approve/deny) → Action
-```
-
-### 2. LLM Agnostic
-
-HMAN doesn't care which AI is asking. Claude, Gemini, GPT, Llama, or the next big model — they all go through HMAN. You're not locked into any vendor.
-
-### 3. Zero Knowledge Architecture
-
-HMAN is a **broker**, not a vault. Your data stays in your control:
-
-| Data | Where It Lives | Who Controls It |
-|------|---------------|-----------------|
-| Your personal data | Your encrypted storage | You |
-| Your credentials | Your device | You |
-| Request routing | HMAN service | HMAN (minimal) |
-| What you shared | Audit log (transparent) | You can see everything |
-
-### 4. Signal-First Communication
-
-All AI requests come through Signal — the most secure messaging protocol:
-
-- 🔐 End-to-end encrypted
-- 📱 Works on your phone
-- 💬 Natural conversation: "Claude wants your calendar. Y/N?"
-- ✅ Simple approval: Just reply "Y" or "N"
-
-### 5. Task Execution with Consent
-
-AIs don't just read — they can **do** things on your behalf. But only with your approval:
-
-```
-Claude: "Pay $145 electricity bill?"
-You: "Y"
-HMAN: *executes payment*
-You: "✅ Paid! Confirmation #12345"
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   YOUR SIGNAL "NOTE TO SELF" = YOUR ENCRYPTED VAULT                        │
+│                                                                             │
+│   [HMAN:PROFILE]                                                            │
+│   Name: John Smith                                                          │
+│   Email: john@example.com                                                   │
+│                                                                             │
+│   [HMAN:PAYMENT]                                                            │
+│   PayID: john@gmail.com                                                     │
+│   Bank: Commonwealth                                                        │
+│                                                                             │
+│   [HMAN:HEALTH]                                                             │
+│   Blood Type: A+                                                            │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    │ Your data stays HERE
+                                    │ (E2E encrypted, Signal Protocol)
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│                              HMAN Protocol                                  │
+│                                                                             │
+│   • Connects to any AI via MCP                                              │
+│   • Receives access requests                                                │
+│   • Forwards to you via Signal                                              │
+│   • Tracks all connections and data sharing                                 │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                    ┌───────────────┼───────────────┐
+                    │               │               │
+                    ▼               ▼               ▼
+              ┌──────────┐   ┌──────────┐   ┌──────────┐
+              │  Claude  │   │   GPT    │   │  Gemini  │    ...any AI
+              └──────────┘   └──────────┘   └──────────┘
 ```
 
 ---
 
 ## How It Works
 
-### For Users
+### Step 1: Store Your Data in Note to Self
 
-1. **Add HMAN to Signal** — Like adding a friend
-2. **Connect your AIs** — Claude, Gemini, etc. connect via MCP
-3. **Receive requests** — "Claude wants your calendar for scheduling"
-4. **Reply Y or N** — That's it
-5. **Stay in control** — Every access logged, every action confirmed
+Open Signal, go to Note to Self, add your data:
 
-### For AI Developers
+```
+[HMAN:PROFILE]
+Name: John Smith
+Email: john@example.com
+Phone: +61 400 000 000
 
-1. **Connect via MCP** — Standard Model Context Protocol
-2. **Request access** — `hman.requestAccess({ resource: 'calendar', purpose: '...' })`
-3. **Wait for approval** — HMAN asks the human
-4. **Receive data or denial** — Respect the human's decision
-5. **Execute tasks** — With human approval for each action
+[HMAN:PAYMENT]
+PayID: john@gmail.com
+BSB: 062-000
+Account: 1234 5678
+
+[HMAN:HEALTH]
+Blood Type: A+
+Allergies: Penicillin
+Medicare: 1234 5678 9
+
+[HMAN:CALENDAR]
+2024-03-15 14:00: Meeting with Sarah
+2024-03-16 16:00: Dentist
+```
+
+**This data NEVER leaves Signal. It's encrypted. Even Signal can't read it.**
+
+### Step 2: Connect HMAN
+
+Add HMAN to your Signal contacts. Send "Hi".
+
+HMAN will help you set up connections to your AIs.
+
+### Step 3: AI Requests, You Approve
+
+```
+HMAN: 🔐 Access Request
+
+Claude wants: Your calendar for tomorrow
+Purpose: "Schedule a follow-up meeting"
+
+Reply Y to approve, N to deny
+```
+
+You: `Y`
+
+```
+HMAN: ✅ Approved
+
+Copy the relevant data from your Note to Self 
+and send it here. I'll pass it to Claude.
+```
+
+You: `[paste from Note to Self]`
+```
+2024-03-15 14:00: Meeting with Sarah
+2024-03-16 16:00: Dentist
+```
+
+```
+HMAN: ✅ Shared with Claude
+
+📋 Data sent: 2 calendar items
+📊 Connection: Claude (Anthropic)
+⏱️ Time: 2024-03-15 10:30 AM
+```
+
+### Step 4: Track Everything
+
+Ask HMAN for your dashboard:
+
+```
+You: STATUS
+
+HMAN: 📊 Your HMAN Dashboard
+
+🔗 Connected AIs:
+• Claude (Anthropic) - active since Mar 1
+• GPT-4 (OpenAI) - active since Mar 5
+
+📋 Recent Access:
+• Mar 15: Claude accessed calendar (approved)
+• Mar 14: GPT-4 accessed email (denied)
+• Mar 10: Claude accessed profile (approved)
+
+📁 Your Data Categories:
+• Profile: 4 items
+• Payment: 2 items
+• Health: 3 items
+• Calendar: 12 items
+
+Type DISCONNECT [AI] to revoke access
+Type HISTORY for full audit log
+```
 
 ---
 
-## Permission Levels
+## Why Signal?
 
-| Level | Description | Example |
-|-------|-------------|---------|
-| 🟢 **Open** | Auto-approved, AI can access freely | Public profile info |
-| 🟡 **Standard** | Approved once, remembered | Calendar read access |
-| 🟠 **Gated** | Requires approval each time | Financial data |
-| 🔴 **Locked** | Never shared automatically | Medical records, passwords |
+Signal is the **one proven place where secrets stay hidden**.
 
----
-
-## The Vision
-
-### Today
-```
-User → uploads data to → AI Platform → AI has control
-```
-
-### With HMAN
-```
-User ← controls data via ← HMAN ← requests from ← Any AI
-```
-
-### The Future
-
-- Every person has an HMAN
-- Every AI asks HMAN before accessing personal data
-- Humans stay in control of the AI age
-- Data sovereignty is the default, not the exception
+| Feature | Why It Matters |
+|---------|----------------|
+| **Signal Protocol** | Gold standard of E2E encryption |
+| **Zero Knowledge** | Even Signal can't read your data |
+| **Battle Tested** | Used by journalists, activists, security experts |
+| **Open Source** | Code is audited, no hidden backdoors |
+| **Syncs Across Devices** | Access from phone, tablet, desktop |
+| **Already Trusted** | Millions already use it for sensitive info |
+| **Free** | Non-profit, no ads, no premium tier |
 
 ---
 
-## Tagline
+## One Profile, Any AI
+
+The .HMAN protocol is **LLM agnostic**.
+
+Train Claude on your preferences. Switch to GPT. Try Gemini. Use Llama. Build your own model.
+
+**They all connect through HMAN. They all ask you for permission.**
+
+Your data stays in your Signal. You choose what each AI sees.
+
+---
+
+## Core Principles
+
+### 1. Just Have Signal
+No app to install. No account to create. No password to remember.
+If you have Signal, you can use HMAN.
+
+### 2. Your Data Never Leaves
+Your Note to Self is YOUR vault. Data is only shared when YOU copy-paste it.
+HMAN tracks the requests and approvals, not the data itself.
+
+### 3. Human In The Loop - Always
+Every access request requires your explicit approval.
+No exceptions. No "set it and forget it." You decide, every time.
+
+### 4. Track Everything
+Know which AIs are connected. See what data was shared.
+Full audit log of every request, every approval, every denial.
+
+### 5. LLM Agnostic
+HMAN works with any AI that supports MCP.
+No vendor lock-in. Switch freely. Your profile follows you.
+
+---
+
+## The Tagline
+
+> **Your secrets stay hidden. Train any AI.**
+
+Or more simply:
 
 > **Your data. Your rules. Any AI.**
 
@@ -156,19 +232,13 @@ User ← controls data via ← HMAN ← requests from ← Any AI
 
 ## Get Started
 
-```bash
-# Clone HMAN
-git clone https://github.com/your-org/Human-Managed-Access-Network
-
-# Install
-pnpm install
-
-# Link Signal
-signal-cli link -n "HMAN"
-
-# You're in control
-```
+1. Install Signal (if you haven't)
+2. Open Note to Self
+3. Add your data using [HMAN:TAG] format
+4. Add HMAN to your contacts
+5. Send "Hi"
+6. You're in control
 
 ---
 
-*HMAN: Because your digital life should be yours to control.*
+*HMAN: Because your personal data should stay personal.*
