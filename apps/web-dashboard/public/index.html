@@ -6,10 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HMAN - Your Data. Your Rules. Any AI.</title>
     <meta name="description"
-        content="HMAN is your personal data representative. Control what AI can access, approve requests via Signal, and stay in control of your digital life.">
+        content="HMAN is your personal data gatekeeper. When AI wants your data, you get a text message. You decide with a simple Y or N.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
     <style>
         :root {
             --bg-dark: #0a0a1a;
@@ -32,10 +33,10 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, var(--bg-dark) 0%, #1a0a2e 50%, #0a1a2e 100%);
+            background: var(--bg-dark);
             color: var(--text);
             line-height: 1.6;
-            min-height: 100vh;
+            overflow-x: hidden;
         }
 
         .container {
@@ -52,7 +53,7 @@
             left: 0;
             right: 0;
             z-index: 100;
-            background: rgba(10, 10, 26, 0.8);
+            background: rgba(10, 10, 26, 0.9);
             backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--border);
         }
@@ -90,25 +91,8 @@
             background-clip: text;
         }
 
-        .nav-links {
-            display: flex;
-            gap: 2rem;
-            list-style: none;
-        }
-
-        .nav-links a {
-            color: var(--text-muted);
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.3s;
-        }
-
-        .nav-links a:hover {
-            color: var(--text);
-        }
-
         .btn {
-            padding: 0.75rem 1.5rem;
+            padding: 0.875rem 2rem;
             border-radius: 100px;
             font-weight: 600;
             text-decoration: none;
@@ -116,6 +100,9 @@
             border: none;
             cursor: pointer;
             font-size: 1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .btn-primary {
@@ -125,7 +112,7 @@
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4);
+            box-shadow: 0 10px 40px rgba(139, 92, 246, 0.4);
         }
 
         .btn-outline {
@@ -134,332 +121,453 @@
             border: 2px solid var(--border);
         }
 
-        .btn-outline:hover {
-            border-color: var(--accent-purple);
-            background: rgba(139, 92, 246, 0.1);
-        }
-
-        /* Hero Section */
+        /* ===== HERO SECTION ===== */
         .hero {
-            padding: 10rem 0 6rem;
+            padding: 10rem 0 4rem;
             text-align: center;
+            position: relative;
+            overflow: hidden;
         }
 
-        .hero-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: rgba(139, 92, 246, 0.2);
-            border: 1px solid rgba(139, 92, 246, 0.4);
-            border-radius: 100px;
-            font-size: 0.875rem;
-            margin-bottom: 2rem;
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(circle at 30% 20%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 70% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
         }
 
         .hero h1 {
-            font-size: 4rem;
-            font-weight: 800;
-            line-height: 1.1;
+            font-size: 4.5rem;
+            font-weight: 900;
+            line-height: 1.05;
             margin-bottom: 1.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .hero h1 .gradient {
             background: linear-gradient(135deg, #fff 0%, #a5b4fc 50%, var(--accent-cyan) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
 
-        .hero p {
-            font-size: 1.25rem;
+        .hero-subtitle {
+            font-size: 1.5rem;
             color: var(--text-muted);
-            max-width: 600px;
-            margin: 0 auto 2.5rem;
+            max-width: 700px;
+            margin: 0 auto 3rem;
+            font-weight: 400;
         }
 
-        .hero-buttons {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
+        .hero-subtitle strong {
+            color: var(--text);
+            font-weight: 600;
         }
 
-        /* How It Works Section */
-        .section {
-            padding: 6rem 0;
+        /* ===== THE CORE CONCEPT - SUPER CLEAR ===== */
+        .concept {
+            padding: 4rem 0 6rem;
         }
 
-        .section-header {
+        .concept-box {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(6, 182, 212, 0.1));
+            border: 2px solid rgba(139, 92, 246, 0.3);
+            border-radius: 32px;
+            padding: 4rem;
             text-align: center;
-            margin-bottom: 4rem;
         }
 
-        .section-header h2 {
-            font-size: 2.5rem;
+        .concept-title {
+            font-size: 1.25rem;
             font-weight: 700;
-            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent-cyan);
+            margin-bottom: 2rem;
         }
 
-        .section-header p {
+        /* The Simple Diagram */
+        .diagram {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin: 3rem 0;
+        }
+
+        .diagram-node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .diagram-icon {
+            width: 100px;
+            height: 100px;
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            position: relative;
+        }
+
+        .diagram-icon.ai {
+            background: rgba(6, 182, 212, 0.2);
+            border: 2px solid rgba(6, 182, 212, 0.4);
+        }
+
+        .diagram-icon.hman {
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+            width: 120px;
+            height: 120px;
+            box-shadow: 0 0 60px rgba(139, 92, 246, 0.4);
+        }
+
+        .diagram-icon.you {
+            background: rgba(16, 185, 129, 0.2);
+            border: 2px solid rgba(16, 185, 129, 0.4);
+        }
+
+        .diagram-label {
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        .diagram-sublabel {
+            font-size: 0.875rem;
             color: var(--text-muted);
-            font-size: 1.125rem;
-            max-width: 600px;
-            margin: 0 auto;
         }
 
-        /* Workflow Steps */
-        .workflow {
-            display: grid;
-            gap: 2rem;
+        .diagram-arrow {
+            font-size: 2rem;
+            color: var(--text-muted);
+            animation: pulse-arrow 2s infinite;
         }
 
-        .workflow-step {
+        @keyframes pulse-arrow {
+
+            0%,
+            100% {
+                opacity: 0.5;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        .concept-explanation {
+            font-size: 1.5rem;
+            max-width: 800px;
+            margin: 2rem auto 0;
+            line-height: 1.6;
+        }
+
+        .concept-explanation strong {
+            color: var(--accent-cyan);
+        }
+
+        /* ===== THE ONE THING ===== */
+        .one-thing {
+            padding: 4rem 0;
+        }
+
+        .one-thing-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 3rem;
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 4rem;
             align-items: center;
-            padding: 3rem;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 24px;
         }
 
-        .workflow-step:nth-child(even) {
-            direction: rtl;
-        }
-
-        .workflow-step:nth-child(even)>* {
-            direction: ltr;
-        }
-
-        .workflow-content {
+        .phone-mockup {
+            background: #1a1a2e;
+            border-radius: 32px;
             padding: 1rem;
+            max-width: 320px;
+            margin: 0 auto;
+            border: 4px solid #333;
         }
 
-        .step-number {
-            display: inline-flex;
+        .phone-screen {
+            background: #0d0d1a;
+            border-radius: 24px;
+            padding: 1.5rem;
+            min-height: 400px;
+        }
+
+        .phone-header {
+            display: flex;
             align-items: center;
-            justify-content: center;
-            width: 48px;
-            height: 48px;
-            background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
-            border-radius: 12px;
-            font-size: 1.25rem;
-            font-weight: 700;
-            margin-bottom: 1.5rem;
-        }
-
-        .workflow-content h3 {
-            font-size: 1.75rem;
-            font-weight: 700;
+            gap: 0.75rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
             margin-bottom: 1rem;
         }
 
-        .workflow-content p {
-            color: var(--text-muted);
-            margin-bottom: 1.5rem;
+        .phone-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .workflow-visual {
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 16px;
-            padding: 2rem;
-            font-family: 'SF Mono', 'Fira Code', monospace;
-            font-size: 0.875rem;
+        .phone-name {
+            font-weight: 600;
         }
 
         .chat-bubble {
-            padding: 1rem 1.25rem;
+            padding: 0.875rem 1rem;
             border-radius: 16px;
-            margin-bottom: 1rem;
-            max-width: 85%;
+            margin-bottom: 0.75rem;
+            max-width: 90%;
+            font-size: 0.9rem;
+            line-height: 1.4;
         }
 
-        .chat-bubble.user {
+        .chat-bubble.incoming {
+            background: rgba(255, 255, 255, 0.1);
+            border-bottom-left-radius: 4px;
+        }
+
+        .chat-bubble.outgoing {
             background: var(--accent-purple);
             margin-left: auto;
             border-bottom-right-radius: 4px;
         }
 
-        .chat-bubble.hman {
-            background: rgba(255, 255, 255, 0.1);
-            border-bottom-left-radius: 4px;
+        .one-thing-text h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
         }
 
-        .chat-bubble.ai {
-            background: rgba(6, 182, 212, 0.3);
-            border: 1px solid rgba(6, 182, 212, 0.5);
-            border-bottom-left-radius: 4px;
-        }
-
-        .chat-label {
-            font-size: 0.75rem;
+        .one-thing-text p {
+            font-size: 1.25rem;
             color: var(--text-muted);
-            margin-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .one-thing-text .highlight {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            border-radius: 8px;
+            color: var(--accent-green);
+            font-weight: 600;
+            font-size: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        /* ===== BEFORE / AFTER ===== */
+        .compare {
+            padding: 6rem 0;
+        }
+
+        .compare-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .compare-header h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+        }
+
+        .compare-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .compare-card {
+            padding: 2.5rem;
+            border-radius: 24px;
+            position: relative;
+        }
+
+        .compare-card.before {
+            background: rgba(239, 68, 68, 0.1);
+            border: 2px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .compare-card.after {
+            background: rgba(16, 185, 129, 0.1);
+            border: 2px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .compare-tag {
+            position: absolute;
+            top: -1rem;
+            left: 2rem;
+            padding: 0.5rem 1.5rem;
+            border-radius: 100px;
+            font-weight: 700;
+            font-size: 0.875rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
 
-        /* Data Storage Section */
-        .storage-options {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1.5rem;
+        .compare-card.before .compare-tag {
+            background: var(--accent-red);
         }
 
-        .storage-card {
-            padding: 2rem;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            transition: all 0.3s;
+        .compare-card.after .compare-tag {
+            background: var(--accent-green);
         }
 
-        .storage-card:hover {
-            border-color: var(--accent-purple);
-            transform: translateY(-4px);
+        .compare-card h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 1rem 0 1.5rem;
         }
 
-        .storage-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .storage-card h3 {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 0.75rem;
-        }
-
-        .storage-card p {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            margin-bottom: 1rem;
-        }
-
-        .storage-card ul {
+        .compare-list {
             list-style: none;
-            font-size: 0.875rem;
         }
 
-        .storage-card li {
-            padding: 0.5rem 0;
+        .compare-list li {
+            padding: 0.75rem 0;
             display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: var(--text-muted);
+            align-items: flex-start;
+            gap: 0.75rem;
+            font-size: 1rem;
         }
 
-        .storage-card li::before {
+        .compare-list li::before {
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .compare-card.before .compare-list li::before {
+            content: '✗';
+            color: var(--accent-red);
+        }
+
+        .compare-card.after .compare-list li::before {
             content: '✓';
             color: var(--accent-green);
         }
 
-        /* Comparison Table */
-        .comparison {
+        /* ===== 3 STEPS ===== */
+        .steps {
+            padding: 6rem 0;
+            background: linear-gradient(180deg, transparent, rgba(139, 92, 246, 0.05));
+        }
+
+        .steps-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .steps-header h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+        }
+
+        .steps-header p {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+        }
+
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+        }
+
+        .step-card {
             background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: 24px;
-            padding: 3rem;
-            overflow-x: auto;
-        }
-
-        .comparison table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .comparison th,
-        .comparison td {
-            padding: 1rem 1.5rem;
-            text-align: left;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .comparison th {
-            font-weight: 600;
-            color: var(--text-muted);
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .comparison td:first-child {
-            font-weight: 600;
-        }
-
-        .check {
-            color: var(--accent-green);
-            font-size: 1.25rem;
-        }
-
-        .cross {
-            color: var(--accent-red);
-            font-size: 1.25rem;
-        }
-
-        /* CTA Section */
-        .cta {
+            padding: 2.5rem;
             text-align: center;
-            padding: 6rem 0;
+            transition: all 0.3s;
         }
 
-        .cta-card {
+        .step-card:hover {
+            transform: translateY(-8px);
+            border-color: var(--accent-purple);
+        }
+
+        .step-number {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin: 0 auto 1.5rem;
+        }
+
+        .step-card h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .step-card p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        /* ===== CTA ===== */
+        .cta {
+            padding: 6rem 0;
+            text-align: center;
+        }
+
+        .cta-box {
             background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(6, 182, 212, 0.2));
-            border: 1px solid rgba(139, 92, 246, 0.3);
+            border: 2px solid rgba(139, 92, 246, 0.3);
             border-radius: 32px;
             padding: 4rem;
         }
 
         .cta h2 {
-            font-size: 2.5rem;
-            font-weight: 700;
+            font-size: 3rem;
+            font-weight: 800;
             margin-bottom: 1rem;
         }
 
         .cta p {
+            font-size: 1.25rem;
             color: var(--text-muted);
-            font-size: 1.125rem;
             margin-bottom: 2rem;
         }
 
-        .qr-section {
+        .cta-buttons {
             display: flex;
-            align-items: center;
+            gap: 1rem;
             justify-content: center;
-            gap: 2rem;
-            margin-top: 2rem;
-            padding: 2rem;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 20px;
-            max-width: 500px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .qr-code {
-            width: 120px;
-            height: 120px;
-            background: white;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.75rem;
-            color: #333;
-            flex-shrink: 0;
-        }
-
-        .qr-text {
-            text-align: left;
-        }
-
-        .qr-text h4 {
-            font-size: 1.25rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .qr-text p {
-            font-size: 0.9rem;
-            margin-bottom: 0;
+            flex-wrap: wrap;
         }
 
         /* Footer */
@@ -468,33 +576,33 @@
             border-top: 1px solid var(--border);
             text-align: center;
             color: var(--text-muted);
-        }
-
-        footer p {
             font-size: 0.875rem;
         }
 
         /* Responsive */
         @media (max-width: 968px) {
-            .workflow-step {
-                grid-template-columns: 1fr;
-                gap: 2rem;
-            }
-
-            .workflow-step:nth-child(even) {
-                direction: ltr;
-            }
-
-            .storage-options {
-                grid-template-columns: 1fr;
-            }
-
             .hero h1 {
-                font-size: 2.5rem;
+                font-size: 3rem;
             }
 
-            .nav-links {
-                display: none;
+            .one-thing-box {
+                grid-template-columns: 1fr;
+            }
+
+            .compare-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .steps-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .diagram {
+                flex-direction: column;
+            }
+
+            .diagram-arrow {
+                transform: rotate(90deg);
             }
         }
     </style>
@@ -505,249 +613,175 @@
         <div class="container">
             <a href="/" class="logo">
                 <div class="logo-icon">🛡️</div>
-                <span class="logo-text">.HMAN</span>
+                <span class="logo-text">HMAN</span>
             </a>
-            <ul class="nav-links">
-                <li><a href="#how-it-works">How It Works</a></li>
-                <li><a href="#storage">Your Data</a></li>
-                <li><a href="#compare">Why HMAN</a></li>
-            </ul>
-            <a href="#get-started" class="btn btn-primary">Get Started</a>
+            <a href="#get-started" class="btn btn-primary">Get Started →</a>
         </div>
     </nav>
 
+    <!-- HERO -->
     <section class="hero">
         <div class="container">
-            <span class="hero-badge">🔐 E2E Encrypted • LLM Agnostic</span>
-            <h1>Your data.<br>Your rules.<br>Any AI.</h1>
-            <p>HMAN is your personal data representative. When AI wants your data, you decide — via a simple text
-                message.</p>
-            <div class="hero-buttons">
-                <a href="#get-started" class="btn btn-primary">Connect via Signal</a>
-                <a href="#how-it-works" class="btn btn-outline">See How It Works</a>
+            <div class="hero-content">
+                <h1><span class="gradient">Your data.<br>Your rules.<br>Any AI.</span></h1>
+                <p class="hero-subtitle">
+                    When AI wants your data, <strong>you get a text message</strong>.<br>
+                    You reply <strong>Y</strong> or <strong>N</strong>. That's it.
+                </p>
             </div>
         </div>
     </section>
 
-    <section class="section" id="how-it-works">
+    <!-- THE CORE CONCEPT -->
+    <section class="concept">
         <div class="container">
-            <div class="section-header">
-                <h2>How .HMAN Works</h2>
-                <p>Get started in 2 minutes. Control AI access forever.</p>
+            <div class="concept-box">
+                <div class="concept-title">How It Works</div>
+
+                <div class="diagram">
+                    <div class="diagram-node">
+                        <div class="diagram-icon ai">🤖</div>
+                        <div class="diagram-label">Any AI</div>
+                        <div class="diagram-sublabel">Claude, GPT, Gemini...</div>
+                    </div>
+
+                    <div class="diagram-arrow">→</div>
+
+                    <div class="diagram-node">
+                        <div class="diagram-icon hman">🛡️</div>
+                        <div class="diagram-label">HMAN</div>
+                        <div class="diagram-sublabel">Your gatekeeper</div>
+                    </div>
+
+                    <div class="diagram-arrow">→</div>
+
+                    <div class="diagram-node">
+                        <div class="diagram-icon you">📱</div>
+                        <div class="diagram-label">You</div>
+                        <div class="diagram-sublabel">Approve via text</div>
+                    </div>
+                </div>
+
+                <p class="concept-explanation">
+                    AI asks HMAN. HMAN asks <strong>you</strong>. You decide.
+                </p>
             </div>
+        </div>
+    </section>
 
-            <div class="workflow">
-                <!-- Step 1 -->
-                <div class="workflow-step">
-                    <div class="workflow-content">
-                        <div class="step-number">1</div>
-                        <h3>Add HMAN to Signal</h3>
-                        <p>Scan the QR code or add HMAN's number to your Signal contacts. Send "Hi" to get started.</p>
-                        <p>No app to install. No account to create. Just Signal.</p>
-                    </div>
-                    <div class="workflow-visual">
-                        <div class="chat-label">You → HMAN</div>
-                        <div class="chat-bubble user">Hi</div>
-                        <div class="chat-bubble hman">
-                            👋 Welcome to HMAN!<br><br>
-                            I'm your personal data representative. AIs will ask me, I'll ask you.<br><br>
-                            Let's set up your profile. What's your name?
+    <!-- THE ONE THING -->
+    <section class="one-thing">
+        <div class="container">
+            <div class="one-thing-box">
+                <div class="phone-mockup">
+                    <div class="phone-screen">
+                        <div class="phone-header">
+                            <div class="phone-avatar">🛡️</div>
+                            <div class="phone-name">HMAN</div>
                         </div>
-                        <div class="chat-bubble user">John Smith</div>
-                        <div class="chat-bubble hman">✅ Got it, John! Your encrypted vault is ready.</div>
-                    </div>
-                </div>
-
-                <!-- Step 2 -->
-                <div class="workflow-step">
-                    <div class="workflow-content">
-                        <div class="step-number">2</div>
-                        <h3>Configure Your Profile</h3>
-                        <p>Tell HMAN what data you want to manage. Add your calendar, contacts, preferences — all via
-                            simple text commands.</p>
-                        <p>Your data is encrypted and stored in YOUR vault, not ours.</p>
-                    </div>
-                    <div class="workflow-visual">
-                        <div class="chat-label">Configuring via Signal</div>
-                        <div class="chat-bubble user">ADD CALENDAR Meeting with Sarah tomorrow 2pm</div>
-                        <div class="chat-bubble hman">✅ Added to your calendar. Permission level: 🟡 Standard</div>
-                        <div class="chat-bubble user">SET EMAIL john@example.com</div>
-                        <div class="chat-bubble hman">✅ Email saved. Permission level: 🟢 Open</div>
-                        <div class="chat-bubble user">ADD HEALTH Blood type A+</div>
-                        <div class="chat-bubble hman">✅ Health record saved. Permission level: 🟠 Gated (requires
-                            approval)</div>
-                    </div>
-                </div>
-
-                <!-- Step 3 -->
-                <div class="workflow-step">
-                    <div class="workflow-content">
-                        <div class="step-number">3</div>
-                        <h3>Connect Your AIs</h3>
-                        <p>Claude, GPT, Gemini — any AI that supports MCP can connect to your HMAN. They ask permission
-                            through you.</p>
-                        <p>LLM-agnostic means you're never locked in.</p>
-                    </div>
-                    <div class="workflow-visual">
-                        <div class="chat-label">AI connects via MCP</div>
-                        <div class="chat-bubble ai">
-                            🤖 Claude wants to connect to your HMAN.<br><br>
-                            Requested access: Calendar (read)
+                        <div class="chat-bubble incoming">
+                            🔐 <strong>Access Request</strong><br><br>
+                            🤖 Claude wants your calendar<br>
+                            📋 Purpose: Schedule a meeting<br><br>
+                            Reply <strong>Y</strong> to approve<br>
+                            Reply <strong>N</strong> to deny
                         </div>
-                        <div class="chat-bubble hman">
-                            🔗 New AI Connection Request<br><br>
-                            AI: Claude (Anthropic)<br>
-                            Wants: Calendar read access<br><br>
-                            Reply Y to approve, N to deny
-                        </div>
-                        <div class="chat-bubble user">Y</div>
-                        <div class="chat-bubble hman">✅ Claude connected! It can now request calendar data.</div>
-                    </div>
-                </div>
-
-                <!-- Step 4 -->
-                <div class="workflow-step">
-                    <div class="workflow-content">
-                        <div class="step-number">4</div>
-                        <h3>AI Asks, You Decide</h3>
-                        <p>Every time an AI wants your data, you get a message. Reply Y or N. That's it.</p>
-                        <p>You see exactly what they're asking for, every single time.</p>
-                    </div>
-                    <div class="workflow-visual">
-                        <div class="chat-label">Daily usage</div>
-                        <div class="chat-bubble hman">
-                            🔐 Access Request [A]<br><br>
-                            🤖 Claude<br>
-                            📋 Wants: Your calendar for tomorrow<br>
-                            🎯 Purpose: "Schedule a follow-up meeting"<br><br>
-                            Reply Y to approve, N to deny
-                        </div>
-                        <div class="chat-bubble user">Y</div>
-                        <div class="chat-bubble hman">
-                            ✅ Shared with Claude:<br>
-                            • Meeting with Sarah @ 2pm<br>
+                        <div class="chat-bubble outgoing">Y</div>
+                        <div class="chat-bubble incoming">
+                            ✅ Approved!<br><br>
+                            Shared with Claude:<br>
+                            • Meeting @ 2pm<br>
                             • Dentist @ 4pm
                         </div>
                     </div>
                 </div>
+
+                <div class="one-thing-text">
+                    <h2>AI asks permission.<br>You reply with a text.</h2>
+                    <p>No app to install. No settings to configure. No passwords to remember.</p>
+                    <p>Just add HMAN to your contacts and reply to messages.</p>
+                    <div class="highlight">Y = Yes &nbsp;&nbsp; N = No</div>
+                    <p>That's the entire interface.</p>
+                </div>
             </div>
         </div>
     </section>
 
-    <section class="section" id="storage">
+    <!-- BEFORE / AFTER -->
+    <section class="compare">
         <div class="container">
-            <div class="section-header">
-                <h2>Your Data, Your Storage</h2>
-                <p>HMAN is a broker, not a vault. Your data lives where YOU choose.</p>
+            <div class="compare-header">
+                <h2>The Difference</h2>
             </div>
 
-            <div class="storage-options">
-                <div class="storage-card">
-                    <div class="storage-icon">📱</div>
-                    <h3>Local Device</h3>
-                    <p>Encrypted .hman file stored on your phone or computer.</p>
-                    <ul>
-                        <li>Never leaves your device</li>
-                        <li>Backup to iCloud/Google Drive</li>
-                        <li>Full offline access</li>
-                        <li>Your key, your data</li>
+            <div class="compare-grid">
+                <div class="compare-card before">
+                    <span class="compare-tag">Without HMAN</span>
+                    <h3>AI has unlimited access</h3>
+                    <ul class="compare-list">
+                        <li>AI reads your emails, calendar, files</li>
+                        <li>You don't know what AI accessed</li>
+                        <li>Each AI company has your data</li>
+                        <li>No way to revoke access</li>
+                        <li>Locked into one AI vendor</li>
                     </ul>
                 </div>
 
-                <div class="storage-card">
-                    <div class="storage-icon">☁️</div>
-                    <h3>HMAN Cloud</h3>
-                    <p>Zero-knowledge encrypted storage. We can't read it.</p>
-                    <ul>
-                        <li>Sync across devices</li>
-                        <li>End-to-end encrypted</li>
-                        <li>We never see your data</li>
-                        <li>Easy backup & restore</li>
-                    </ul>
-                </div>
-
-                <div class="storage-card">
-                    <div class="storage-icon">🏠</div>
-                    <h3>Self-Hosted</h3>
-                    <p>Run your own HMAN node on your server.</p>
-                    <ul>
-                        <li>Complete control</li>
-                        <li>Your infrastructure</li>
-                        <li>Open source</li>
-                        <li>For power users</li>
+                <div class="compare-card after">
+                    <span class="compare-tag">With HMAN</span>
+                    <h3>You approve every request</h3>
+                    <ul class="compare-list">
+                        <li>AI asks, you get a text message</li>
+                        <li>You see exactly what AI wants</li>
+                        <li>Your data stays in YOUR vault</li>
+                        <li>Revoke access with one message</li>
+                        <li>Works with any AI (LLM agnostic)</li>
                     </ul>
                 </div>
             </div>
         </div>
     </section>
 
-    <section class="section" id="compare">
+    <!-- 3 STEPS -->
+    <section class="steps">
         <div class="container">
-            <div class="section-header">
-                <h2>Why HMAN?</h2>
-                <p>Compare how your data is handled</p>
+            <div class="steps-header">
+                <h2>Start in 2 Minutes</h2>
+                <p>No account needed. No app to install.</p>
             </div>
 
-            <div class="comparison">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Feature</th>
-                            <th>Without HMAN</th>
-                            <th>With HMAN</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Who holds your data?</td>
-                            <td>Each AI platform</td>
-                            <td>You decide (local/cloud/self-hosted)</td>
-                        </tr>
-                        <tr>
-                            <td>Who decides access?</td>
-                            <td>The AI company</td>
-                            <td>You, every single time</td>
-                        </tr>
-                        <tr>
-                            <td>Human approval required?</td>
-                            <td><span class="cross">✗</span> No</td>
-                            <td><span class="check">✓</span> Always</td>
-                        </tr>
-                        <tr>
-                            <td>Works with any AI?</td>
-                            <td><span class="cross">✗</span> Locked to vendor</td>
-                            <td><span class="check">✓</span> LLM agnostic</td>
-                        </tr>
-                        <tr>
-                            <td>See what AI accessed?</td>
-                            <td><span class="cross">✗</span> Hidden</td>
-                            <td><span class="check">✓</span> Full audit log</td>
-                        </tr>
-                        <tr>
-                            <td>Revoke access instantly?</td>
-                            <td><span class="cross">✗</span> Complicated</td>
-                            <td><span class="check">✓</span> One message</td>
-                        </tr>
-                    </tbody>
-                </table>
+            <div class="steps-grid">
+                <div class="step-card">
+                    <div class="step-number">1</div>
+                    <h3>Add HMAN to Contacts</h3>
+                    <p>Scan the QR code or save HMAN's number. Send "Hi" to start.</p>
+                </div>
+
+                <div class="step-card">
+                    <div class="step-number">2</div>
+                    <h3>Connect Your AIs</h3>
+                    <p>Claude, GPT, Gemini — they all connect through HMAN via MCP.</p>
+                </div>
+
+                <div class="step-card">
+                    <div class="step-number">3</div>
+                    <h3>Reply Y or N</h3>
+                    <p>When AI needs something, you get a text. Reply to approve or deny.</p>
+                </div>
             </div>
         </div>
     </section>
 
+    <!-- CTA -->
     <section class="cta" id="get-started">
         <div class="container">
-            <div class="cta-card">
-                <h2>Take Control of Your Data</h2>
-                <p>Start using HMAN in under 2 minutes. Just add us to Signal.</p>
-
-                <div class="qr-section">
-                    <div class="qr-code">
-                        [QR Code]<br>Coming Soon
-                    </div>
-                    <div class="qr-text">
-                        <h4>Scan to Connect</h4>
-                        <p>Add HMAN to your Signal contacts and send "Hi" to get started.</p>
-                    </div>
+            <div class="cta-box">
+                <h2>Take Control</h2>
+                <p>Your data should ask your permission. Always.</p>
+                <div class="cta-buttons">
+                    <a href="#" class="btn btn-primary">📱 Connect via Signal</a>
+                    <a href="https://github.com/Tailor-AUS/Human-Managed-Access-Network" class="btn btn-outline">View on
+                        GitHub</a>
                 </div>
             </div>
         </div>
@@ -755,10 +789,8 @@
 
     <footer>
         <div class="container">
-            <p>HMAN - Human Managed Access Network</p>
+            <p><strong>HMAN</strong> — Human Managed Access Network</p>
             <p style="margin-top: 0.5rem;">Your data. Your rules. Any AI.</p>
-            <p style="margin-top: 1rem; font-size: 0.75rem;">Signal® is a registered trademark of Signal Technology
-                Foundation.</p>
         </div>
     </footer>
 </body>
