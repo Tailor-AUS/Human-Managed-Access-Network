@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HMAN - Your Data. Your Rules. Any AI.</title>
+    <title>HMAN - Your Encrypted Vault, Powered by Signal</title>
     <meta name="description"
-        content="HMAN is your personal data gatekeeper. When AI wants your data, you get a text message. You decide with a simple Y or N.">
+        content="Store your personal data in Signal's Note to Self. Train any AI. Share only what you approve. Your secrets stay hidden.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
@@ -21,8 +21,9 @@
             --accent-purple: #8b5cf6;
             --accent-cyan: #06b6d4;
             --accent-green: #10b981;
-            --accent-yellow: #f59e0b;
+            --accent-blue: #3b82f6;
             --accent-red: #ef4444;
+            --signal-blue: #3a76f0;
         }
 
         * {
@@ -40,7 +41,7 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1100px;
             margin: 0 auto;
             padding: 0 2rem;
         }
@@ -53,7 +54,7 @@
             left: 0;
             right: 0;
             z-index: 100;
-            background: rgba(10, 10, 26, 0.9);
+            background: rgba(10, 10, 26, 0.95);
             backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--border);
         }
@@ -85,10 +86,7 @@
         .logo-text {
             font-size: 1.5rem;
             font-weight: 800;
-            background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: var(--text);
         }
 
         .btn {
@@ -105,28 +103,21 @@
             gap: 0.5rem;
         }
 
-        .btn-primary {
-            background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+        .btn-signal {
+            background: var(--signal-blue);
             color: white;
         }
 
-        .btn-primary:hover {
+        .btn-signal:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 40px rgba(139, 92, 246, 0.4);
+            box-shadow: 0 10px 40px rgba(58, 118, 240, 0.4);
         }
 
-        .btn-outline {
-            background: transparent;
-            color: var(--text);
-            border: 2px solid var(--border);
-        }
-
-        /* ===== HERO SECTION ===== */
+        /* ===== HERO ===== */
         .hero {
-            padding: 10rem 0 4rem;
+            padding: 12rem 0 6rem;
             text-align: center;
             position: relative;
-            overflow: hidden;
         }
 
         .hero::before {
@@ -136,9 +127,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background:
-                radial-gradient(circle at 30% 20%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 70% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 50%);
+            background: radial-gradient(circle at 50% 30%, rgba(58, 118, 240, 0.15) 0%, transparent 60%);
             pointer-events: none;
         }
 
@@ -147,173 +136,95 @@
             z-index: 2;
         }
 
+        .signal-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1.25rem;
+            background: rgba(58, 118, 240, 0.2);
+            border: 1px solid rgba(58, 118, 240, 0.4);
+            border-radius: 100px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 2rem;
+        }
+
         .hero h1 {
-            font-size: 4.5rem;
+            font-size: 4rem;
             font-weight: 900;
-            line-height: 1.05;
+            line-height: 1.1;
             margin-bottom: 1.5rem;
             letter-spacing: -0.02em;
         }
 
         .hero h1 .gradient {
-            background: linear-gradient(135deg, #fff 0%, #a5b4fc 50%, var(--accent-cyan) 100%);
+            background: linear-gradient(135deg, #fff 20%, var(--signal-blue) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
 
         .hero-subtitle {
-            font-size: 1.5rem;
+            font-size: 1.375rem;
             color: var(--text-muted);
-            max-width: 700px;
-            margin: 0 auto 3rem;
-            font-weight: 400;
+            max-width: 650px;
+            margin: 0 auto 2.5rem;
+            line-height: 1.7;
         }
 
         .hero-subtitle strong {
             color: var(--text);
-            font-weight: 600;
         }
 
-        /* ===== THE CORE CONCEPT - SUPER CLEAR ===== */
-        .concept {
-            padding: 4rem 0 6rem;
-        }
-
-        .concept-box {
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(6, 182, 212, 0.1));
-            border: 2px solid rgba(139, 92, 246, 0.3);
-            border-radius: 32px;
-            padding: 4rem;
-            text-align: center;
-        }
-
-        .concept-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--accent-cyan);
-            margin-bottom: 2rem;
-        }
-
-        /* The Simple Diagram */
-        .diagram {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-            margin: 3rem 0;
-        }
-
-        .diagram-node {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .diagram-icon {
-            width: 100px;
-            height: 100px;
-            border-radius: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 3rem;
-            position: relative;
-        }
-
-        .diagram-icon.ai {
-            background: rgba(6, 182, 212, 0.2);
-            border: 2px solid rgba(6, 182, 212, 0.4);
-        }
-
-        .diagram-icon.hman {
-            background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
-            width: 120px;
-            height: 120px;
-            box-shadow: 0 0 60px rgba(139, 92, 246, 0.4);
-        }
-
-        .diagram-icon.you {
-            background: rgba(16, 185, 129, 0.2);
-            border: 2px solid rgba(16, 185, 129, 0.4);
-        }
-
-        .diagram-label {
-            font-weight: 700;
-            font-size: 1rem;
-        }
-
-        .diagram-sublabel {
-            font-size: 0.875rem;
-            color: var(--text-muted);
-        }
-
-        .diagram-arrow {
-            font-size: 2rem;
-            color: var(--text-muted);
-            animation: pulse-arrow 2s infinite;
-        }
-
-        @keyframes pulse-arrow {
-
-            0%,
-            100% {
-                opacity: 0.5;
-            }
-
-            50% {
-                opacity: 1;
-            }
-        }
-
-        .concept-explanation {
-            font-size: 1.5rem;
-            max-width: 800px;
-            margin: 2rem auto 0;
-            line-height: 1.6;
-        }
-
-        .concept-explanation strong {
-            color: var(--accent-cyan);
-        }
-
-        /* ===== THE ONE THING ===== */
-        .one-thing {
+        /* ===== THE KEY INSIGHT ===== */
+        .insight {
             padding: 4rem 0;
         }
 
-        .one-thing-box {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
+        .insight-box {
+            background: linear-gradient(135deg, rgba(58, 118, 240, 0.1), rgba(16, 185, 129, 0.1));
+            border: 2px solid rgba(58, 118, 240, 0.3);
             border-radius: 24px;
             padding: 3rem;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 4rem;
+            gap: 3rem;
             align-items: center;
         }
 
-        .phone-mockup {
+        .insight-text h2 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
+        }
+
+        .insight-text p {
+            font-size: 1.125rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+
+        .insight-text .highlight {
+            background: rgba(58, 118, 240, 0.2);
+            border-left: 4px solid var(--signal-blue);
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+            font-size: 1.1rem;
+        }
+
+        /* Note to Self Mockup */
+        .note-mockup {
             background: #1a1a2e;
-            border-radius: 32px;
-            padding: 1rem;
-            max-width: 320px;
-            margin: 0 auto;
-            border: 4px solid #333;
-        }
-
-        .phone-screen {
-            background: #0d0d1a;
-            border-radius: 24px;
+            border-radius: 20px;
             padding: 1.5rem;
-            min-height: 400px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.85rem;
+            border: 1px solid var(--border);
         }
 
-        .phone-header {
+        .note-header {
             display: flex;
             align-items: center;
             gap: 0.75rem;
@@ -322,220 +233,195 @@
             margin-bottom: 1rem;
         }
 
-        .phone-avatar {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+        .note-header-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--signal-blue);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-
-        .phone-name {
-            font-weight: 600;
-        }
-
-        .chat-bubble {
-            padding: 0.875rem 1rem;
-            border-radius: 16px;
-            margin-bottom: 0.75rem;
-            max-width: 90%;
-            font-size: 0.9rem;
-            line-height: 1.4;
-        }
-
-        .chat-bubble.incoming {
-            background: rgba(255, 255, 255, 0.1);
-            border-bottom-left-radius: 4px;
-        }
-
-        .chat-bubble.outgoing {
-            background: var(--accent-purple);
-            margin-left: auto;
-            border-bottom-right-radius: 4px;
-        }
-
-        .one-thing-text h2 {
-            font-size: 2.5rem;
-            font-weight: 800;
-            margin-bottom: 1.5rem;
-            line-height: 1.2;
-        }
-
-        .one-thing-text p {
-            font-size: 1.25rem;
-            color: var(--text-muted);
-            margin-bottom: 1.5rem;
-        }
-
-        .one-thing-text .highlight {
-            display: inline-block;
-            padding: 0.5rem 1rem;
-            background: rgba(16, 185, 129, 0.2);
-            border: 1px solid rgba(16, 185, 129, 0.4);
-            border-radius: 8px;
-            color: var(--accent-green);
-            font-weight: 600;
-            font-size: 1.5rem;
-            margin: 1rem 0;
-        }
-
-        /* ===== BEFORE / AFTER ===== */
-        .compare {
-            padding: 6rem 0;
-        }
-
-        .compare-header {
-            text-align: center;
-            margin-bottom: 4rem;
-        }
-
-        .compare-header h2 {
-            font-size: 2.5rem;
-            font-weight: 800;
-            margin-bottom: 1rem;
-        }
-
-        .compare-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-        }
-
-        .compare-card {
-            padding: 2.5rem;
-            border-radius: 24px;
-            position: relative;
-        }
-
-        .compare-card.before {
-            background: rgba(239, 68, 68, 0.1);
-            border: 2px solid rgba(239, 68, 68, 0.3);
-        }
-
-        .compare-card.after {
-            background: rgba(16, 185, 129, 0.1);
-            border: 2px solid rgba(16, 185, 129, 0.3);
-        }
-
-        .compare-tag {
-            position: absolute;
-            top: -1rem;
-            left: 2rem;
-            padding: 0.5rem 1.5rem;
-            border-radius: 100px;
-            font-weight: 700;
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .compare-card.before .compare-tag {
-            background: var(--accent-red);
-        }
-
-        .compare-card.after .compare-tag {
-            background: var(--accent-green);
-        }
-
-        .compare-card h3 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin: 1rem 0 1.5rem;
-        }
-
-        .compare-list {
-            list-style: none;
-        }
-
-        .compare-list li {
-            padding: 0.75rem 0;
-            display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
             font-size: 1rem;
         }
 
-        .compare-list li::before {
-            font-size: 1.25rem;
-            flex-shrink: 0;
+        .note-header-text {
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
         }
 
-        .compare-card.before .compare-list li::before {
-            content: '✗';
-            color: var(--accent-red);
+        .note-content {
+            color: var(--text-muted);
+            line-height: 1.8;
         }
 
-        .compare-card.after .compare-list li::before {
-            content: '✓';
+        .note-section {
+            margin-bottom: 1rem;
+        }
+
+        .note-section-title {
+            color: var(--signal-blue);
+            font-weight: 600;
+        }
+
+        .note-value {
+            color: var(--text);
+        }
+
+        .note-secret {
             color: var(--accent-green);
         }
 
-        /* ===== 3 STEPS ===== */
-        .steps {
+        /* ===== HOW IT WORKS ===== */
+        .how-it-works {
             padding: 6rem 0;
-            background: linear-gradient(180deg, transparent, rgba(139, 92, 246, 0.05));
         }
 
-        .steps-header {
+        .section-header {
             text-align: center;
             margin-bottom: 4rem;
         }
 
-        .steps-header h2 {
+        .section-header h2 {
             font-size: 2.5rem;
             font-weight: 800;
             margin-bottom: 1rem;
         }
 
-        .steps-header p {
+        .section-header p {
             font-size: 1.25rem;
             color: var(--text-muted);
         }
 
-        .steps-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
+        .workflow-steps {
+            display: flex;
+            flex-direction: column;
             gap: 2rem;
         }
 
-        .step-card {
+        .workflow-step {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 2rem;
+            align-items: center;
+            padding: 2rem;
             background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 24px;
-            padding: 2.5rem;
-            text-align: center;
-            transition: all 0.3s;
-        }
-
-        .step-card:hover {
-            transform: translateY(-8px);
-            border-color: var(--accent-purple);
+            border-radius: 20px;
         }
 
         .step-number {
-            width: 64px;
-            height: 64px;
-            background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, var(--accent-purple), var(--signal-blue));
             border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 1.5rem;
             font-weight: 800;
-            margin: 0 auto 1.5rem;
         }
 
-        .step-card h3 {
+        .step-content h3 {
             font-size: 1.25rem;
             font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .step-content p {
+            color: var(--text-muted);
+        }
+
+        .step-visual {
+            font-size: 2.5rem;
+        }
+
+        /* ===== WHY SIGNAL ===== */
+        .why-signal {
+            padding: 6rem 0;
+            background: linear-gradient(180deg, transparent, rgba(58, 118, 240, 0.05));
+        }
+
+        .why-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+
+        .why-card {
+            padding: 2rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .why-card:hover {
+            border-color: var(--signal-blue);
+            transform: translateY(-4px);
+        }
+
+        .why-icon {
+            font-size: 2.5rem;
             margin-bottom: 1rem;
         }
 
-        .step-card p {
+        .why-card h3 {
+            font-size: 1.125rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+        }
+
+        .why-card p {
             color: var(--text-muted);
-            font-size: 0.95rem;
+            font-size: 0.9rem;
+        }
+
+        /* ===== ANY LLM ===== */
+        .any-llm {
+            padding: 6rem 0;
+        }
+
+        .llm-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 3rem;
+            text-align: center;
+        }
+
+        .llm-box h2 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+        }
+
+        .llm-box p {
+            color: var(--text-muted);
+            font-size: 1.125rem;
+            margin-bottom: 2rem;
+        }
+
+        .llm-logos {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .llm-logo {
+            padding: 1rem 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--text-muted);
+        }
+
+        .llm-logo:hover {
+            border-color: var(--accent-cyan);
+            color: var(--text);
         }
 
         /* ===== CTA ===== */
@@ -545,14 +431,14 @@
         }
 
         .cta-box {
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(6, 182, 212, 0.2));
-            border: 2px solid rgba(139, 92, 246, 0.3);
+            background: linear-gradient(135deg, rgba(58, 118, 240, 0.2), rgba(139, 92, 246, 0.2));
+            border: 2px solid rgba(58, 118, 240, 0.3);
             border-radius: 32px;
             padding: 4rem;
         }
 
         .cta h2 {
-            font-size: 3rem;
+            font-size: 2.5rem;
             font-weight: 800;
             margin-bottom: 1rem;
         }
@@ -570,6 +456,12 @@
             flex-wrap: wrap;
         }
 
+        .btn-outline {
+            background: transparent;
+            color: var(--text);
+            border: 2px solid var(--border);
+        }
+
         /* Footer */
         footer {
             padding: 3rem 0;
@@ -582,27 +474,24 @@
         /* Responsive */
         @media (max-width: 968px) {
             .hero h1 {
-                font-size: 3rem;
+                font-size: 2.75rem;
             }
 
-            .one-thing-box {
+            .insight-box {
                 grid-template-columns: 1fr;
             }
 
-            .compare-grid {
+            .why-grid {
                 grid-template-columns: 1fr;
             }
 
-            .steps-grid {
+            .workflow-step {
                 grid-template-columns: 1fr;
+                text-align: center;
             }
 
-            .diagram {
-                flex-direction: column;
-            }
-
-            .diagram-arrow {
-                transform: rotate(90deg);
+            .step-visual {
+                display: none;
             }
         }
     </style>
@@ -613,9 +502,9 @@
         <div class="container">
             <a href="/" class="logo">
                 <div class="logo-icon">🛡️</div>
-                <span class="logo-text">HMAN</span>
+                <span class="logo-text">.HMAN</span>
             </a>
-            <a href="#get-started" class="btn btn-primary">Get Started →</a>
+            <a href="#get-started" class="btn btn-signal">Get Started →</a>
         </div>
     </nav>
 
@@ -623,150 +512,178 @@
     <section class="hero">
         <div class="container">
             <div class="hero-content">
-                <h1><span class="gradient">Your data.<br>Your rules.<br>Any AI.</span></h1>
+                <span class="signal-badge">🔐 Powered by Signal Protocol</span>
+                <h1><span class="gradient">Your secrets stay hidden.<br>Train any AI.</span></h1>
                 <p class="hero-subtitle">
-                    When AI wants your data, <strong>you get a text message</strong>.<br>
-                    You reply <strong>Y</strong> or <strong>N</strong>. That's it.
+                    Store your personal data in Signal's <strong>Note to Self</strong>.<br>
+                    Share only what you approve. Works with every LLM.
                 </p>
+                <a href="#get-started" class="btn btn-signal">📱 Connect via Signal</a>
             </div>
         </div>
     </section>
 
-    <!-- THE CORE CONCEPT -->
-    <section class="concept">
+    <!-- THE KEY INSIGHT -->
+    <section class="insight">
         <div class="container">
-            <div class="concept-box">
-                <div class="concept-title">How It Works</div>
-
-                <div class="diagram">
-                    <div class="diagram-node">
-                        <div class="diagram-icon ai">🤖</div>
-                        <div class="diagram-label">Any AI</div>
-                        <div class="diagram-sublabel">Claude, GPT, Gemini...</div>
+            <div class="insight-box">
+                <div class="insight-text">
+                    <h2>Your Note to Self is your encrypted vault</h2>
+                    <p>Instead of giving your credit card, medical records, or private data to every AI company...</p>
+                    <div class="highlight">
+                        Store it once in Signal's Note to Self.<br>
+                        Share only what's needed, when it's needed.
                     </div>
-
-                    <div class="diagram-arrow">→</div>
-
-                    <div class="diagram-node">
-                        <div class="diagram-icon hman">🛡️</div>
-                        <div class="diagram-label">HMAN</div>
-                        <div class="diagram-sublabel">Your gatekeeper</div>
-                    </div>
-
-                    <div class="diagram-arrow">→</div>
-
-                    <div class="diagram-node">
-                        <div class="diagram-icon you">📱</div>
-                        <div class="diagram-label">You</div>
-                        <div class="diagram-sublabel">Approve via text</div>
-                    </div>
+                    <p>Signal's encryption is the gold standard. Journalists, activists, and privacy experts trust it.
+                        Now your AI interactions can too.</p>
                 </div>
 
-                <p class="concept-explanation">
-                    AI asks HMAN. HMAN asks <strong>you</strong>. You decide.
-                </p>
-            </div>
-        </div>
-    </section>
-
-    <!-- THE ONE THING -->
-    <section class="one-thing">
-        <div class="container">
-            <div class="one-thing-box">
-                <div class="phone-mockup">
-                    <div class="phone-screen">
-                        <div class="phone-header">
-                            <div class="phone-avatar">🛡️</div>
-                            <div class="phone-name">HMAN</div>
+                <div class="note-mockup">
+                    <div class="note-header">
+                        <div class="note-header-icon">📝</div>
+                        <div class="note-header-text">Note to Self</div>
+                    </div>
+                    <div class="note-content">
+                        <div class="note-section">
+                            <span class="note-section-title">[HMAN:PROFILE]</span><br>
+                            Name: <span class="note-value">John Smith</span><br>
+                            Email: <span class="note-value">john@example.com</span>
                         </div>
-                        <div class="chat-bubble incoming">
-                            🔐 <strong>Access Request</strong><br><br>
-                            🤖 Claude wants your calendar<br>
-                            📋 Purpose: Schedule a meeting<br><br>
-                            Reply <strong>Y</strong> to approve<br>
-                            Reply <strong>N</strong> to deny
+                        <div class="note-section">
+                            <span class="note-section-title">[HMAN:PAYMENT]</span><br>
+                            PayID: <span class="note-secret">john@gmail.com</span><br>
+                            Bank: <span class="note-secret">Commonwealth</span>
                         </div>
-                        <div class="chat-bubble outgoing">Y</div>
-                        <div class="chat-bubble incoming">
-                            ✅ Approved!<br><br>
-                            Shared with Claude:<br>
-                            • Meeting @ 2pm<br>
-                            • Dentist @ 4pm
+                        <div class="note-section">
+                            <span class="note-section-title">[HMAN:HEALTH]</span><br>
+                            Blood Type: <span class="note-value">A+</span><br>
+                            Allergies: <span class="note-value">Penicillin</span>
+                        </div>
+                        <div class="note-section">
+                            <span class="note-section-title">[HMAN:CALENDAR]</span><br>
+                            <span class="note-value">Tomorrow: Meeting 2pm</span>
                         </div>
                     </div>
                 </div>
-
-                <div class="one-thing-text">
-                    <h2>AI asks permission.<br>You reply with a text.</h2>
-                    <p>No app to install. No settings to configure. No passwords to remember.</p>
-                    <p>Just add HMAN to your contacts and reply to messages.</p>
-                    <div class="highlight">Y = Yes &nbsp;&nbsp; N = No</div>
-                    <p>That's the entire interface.</p>
-                </div>
             </div>
         </div>
     </section>
 
-    <!-- BEFORE / AFTER -->
-    <section class="compare">
+    <!-- HOW IT WORKS -->
+    <section class="how-it-works">
         <div class="container">
-            <div class="compare-header">
-                <h2>The Difference</h2>
+            <div class="section-header">
+                <h2>How It Works</h2>
+                <p>One Signal contact. Any AI. Your rules.</p>
             </div>
 
-            <div class="compare-grid">
-                <div class="compare-card before">
-                    <span class="compare-tag">Without HMAN</span>
-                    <h3>AI has unlimited access</h3>
-                    <ul class="compare-list">
-                        <li>AI reads your emails, calendar, files</li>
-                        <li>You don't know what AI accessed</li>
-                        <li>Each AI company has your data</li>
-                        <li>No way to revoke access</li>
-                        <li>Locked into one AI vendor</li>
-                    </ul>
-                </div>
-
-                <div class="compare-card after">
-                    <span class="compare-tag">With HMAN</span>
-                    <h3>You approve every request</h3>
-                    <ul class="compare-list">
-                        <li>AI asks, you get a text message</li>
-                        <li>You see exactly what AI wants</li>
-                        <li>Your data stays in YOUR vault</li>
-                        <li>Revoke access with one message</li>
-                        <li>Works with any AI (LLM agnostic)</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- 3 STEPS -->
-    <section class="steps">
-        <div class="container">
-            <div class="steps-header">
-                <h2>Start in 2 Minutes</h2>
-                <p>No account needed. No app to install.</p>
-            </div>
-
-            <div class="steps-grid">
-                <div class="step-card">
+            <div class="workflow-steps">
+                <div class="workflow-step">
                     <div class="step-number">1</div>
-                    <h3>Add HMAN to Contacts</h3>
-                    <p>Scan the QR code or save HMAN's number. Send "Hi" to start.</p>
+                    <div class="step-content">
+                        <h3>Store your data in Note to Self</h3>
+                        <p>Use HMAN's simple format to organize your profile, payments, health records, calendar —
+                            anything you might share with AI.</p>
+                    </div>
+                    <div class="step-visual">📝</div>
                 </div>
 
-                <div class="step-card">
+                <div class="workflow-step">
                     <div class="step-number">2</div>
-                    <h3>Connect Your AIs</h3>
-                    <p>Claude, GPT, Gemini — they all connect through HMAN via MCP.</p>
+                    <div class="step-content">
+                        <h3>AI asks HMAN, HMAN asks you</h3>
+                        <p>When Claude, GPT, or any LLM needs your data, you get a Signal message: "Claude wants your
+                            calendar. Share? Y/N"</p>
+                    </div>
+                    <div class="step-visual">💬</div>
                 </div>
 
-                <div class="step-card">
+                <div class="workflow-step">
                     <div class="step-number">3</div>
-                    <h3>Reply Y or N</h3>
-                    <p>When AI needs something, you get a text. Reply to approve or deny.</p>
+                    <div class="step-content">
+                        <h3>You decide what to share</h3>
+                        <p>Reply Y to approve. Copy the relevant data from your Note to Self. Only what you choose gets
+                            shared — nothing more.</p>
+                    </div>
+                    <div class="step-visual">✅</div>
+                </div>
+
+                <div class="workflow-step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3>Your secrets stay in Signal</h3>
+                        <p>Your credit card never lives in OpenAI's database. Your medical records never go to
+                            Anthropic. They stay encrypted in YOUR Signal.</p>
+                    </div>
+                    <div class="step-visual">🔐</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- WHY SIGNAL -->
+    <section class="why-signal">
+        <div class="container">
+            <div class="section-header">
+                <h2>Why Signal?</h2>
+                <p>The one proven place where secrets stay hidden</p>
+            </div>
+
+            <div class="why-grid">
+                <div class="why-card">
+                    <div class="why-icon">🔒</div>
+                    <h3>End-to-End Encrypted</h3>
+                    <p>Signal Protocol is the gold standard. Used by WhatsApp, Facebook Messenger (secret chats), and
+                        more.</p>
+                </div>
+
+                <div class="why-card">
+                    <div class="why-icon">🙈</div>
+                    <h3>Even Signal Can't Read It</h3>
+                    <p>Zero-knowledge architecture. Not even Signal's servers can decrypt your Note to Self.</p>
+                </div>
+
+                <div class="why-card">
+                    <div class="why-icon">🌍</div>
+                    <h3>Trusted by Millions</h3>
+                    <p>Journalists, activists, privacy researchers, and security experts trust Signal with their most
+                        sensitive communications.</p>
+                </div>
+
+                <div class="why-card">
+                    <div class="why-icon">📱</div>
+                    <h3>Already on Your Phone</h3>
+                    <p>No new app to install. No new password to remember. You already have Signal.</p>
+                </div>
+
+                <div class="why-card">
+                    <div class="why-icon">🔄</div>
+                    <h3>Syncs Across Devices</h3>
+                    <p>Access your data from phone, tablet, or desktop. Always encrypted, always in sync.</p>
+                </div>
+
+                <div class="why-card">
+                    <div class="why-icon">🆓</div>
+                    <h3>Free Forever</h3>
+                    <p>Non-profit. No ads. No premium tier. Your privacy isn't a product.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ANY LLM -->
+    <section class="any-llm">
+        <div class="container">
+            <div class="llm-box">
+                <h2>One Profile. Every AI.</h2>
+                <p>Train Claude, GPT, Gemini, Llama, or your own custom model. They all go through HMAN.</p>
+                <div class="llm-logos">
+                    <div class="llm-logo">Claude</div>
+                    <div class="llm-logo">GPT-4</div>
+                    <div class="llm-logo">Gemini</div>
+                    <div class="llm-logo">Llama</div>
+                    <div class="llm-logo">Mistral</div>
+                    <div class="llm-logo">Your Custom LLM</div>
                 </div>
             </div>
         </div>
@@ -776,10 +693,11 @@
     <section class="cta" id="get-started">
         <div class="container">
             <div class="cta-box">
-                <h2>Take Control</h2>
-                <p>Your data should ask your permission. Always.</p>
+                <h2>Your data. Your rules. Any AI.</h2>
+                <p>Stop giving every AI company your personal information.<br>Keep it in Signal. Share only what you
+                    approve.</p>
                 <div class="cta-buttons">
-                    <a href="#" class="btn btn-primary">📱 Connect via Signal</a>
+                    <a href="#" class="btn btn-signal">📱 Connect via Signal</a>
                     <a href="https://github.com/Tailor-AUS/Human-Managed-Access-Network" class="btn btn-outline">View on
                         GitHub</a>
                 </div>
@@ -790,7 +708,8 @@
     <footer>
         <div class="container">
             <p><strong>HMAN</strong> — Human Managed Access Network</p>
-            <p style="margin-top: 0.5rem;">Your data. Your rules. Any AI.</p>
+            <p style="margin-top: 0.5rem; font-size: 0.75rem;">Signal® is a registered trademark of Signal Technology
+                Foundation. HMAN is not affiliated with Signal.</p>
         </div>
     </footer>
 </body>
