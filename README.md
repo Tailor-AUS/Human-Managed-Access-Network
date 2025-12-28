@@ -1,134 +1,95 @@
 # .HMAN
 
-**Your personal API. All via Signal.**
+**Connect AI to your life. You stay in control.**
 
 ---
 
 ## What is .HMAN?
 
-.HMAN gives you a unique code (like `HMAN-7K3F-X9P2`) that any AI, business, or person can use to reach you. All requests come to you via Signal. You reply to approve or deny.
-
-```
-AI/Business → Your HMAN Code → Signal Message → You Reply → Done
-```
+.HMAN is your personal gateway between AI and your data. Add .HMAN on Signal, generate a session code, and give it to any AI. All requests come through Signal—you approve or deny.
 
 ---
 
-## How It Works
+## Quick Start
 
-1. **Sign up** with your mobile number
-2. **Verify** via SMS and Signal
-3. **Get your code**: `HMAN-XXXX-XXXX`
-4. **Give code to any AI** (Claude, GPT, etc.)
-5. **Receive requests via Signal**
-6. **Reply Y/N** to approve or deny
+1. **Add .HMAN on Signal** → Send "start"
+2. **Generate a code** → Send "code"
+3. **Get a 6-char code** → `X7K3PQ` (valid 60 seconds)
+4. **Give to AI** → "Connect with my .HMAN code: X7K3PQ"
+5. **Approve requests** → Reply Y/N on Signal
 
 ---
 
-## Example: AI Request
+## Example
 
 ```
-───────────────────────────────────
-.HMAN
+You: code
 
-Request from Claude
+.HMAN: Your session code:
+       X7K3PQ
+       Valid for 60 seconds
 
-Claude wants your calendar for
-project planning.
+--- You give code to Claude ---
 
-Reply Y to approve
-Reply N to deny
-───────────────────────────────────
+Claude: "I've connected to your .HMAN"
+
+--- Claude requests calendar ---
+
+.HMAN: Claude wants your calendar.
+       Y to approve
+       N to deny
 
 You: Y
 
-───────────────────────────────────
-.HMAN
-
-✓ Approved. Shared calendar with Claude.
-───────────────────────────────────
+.HMAN: ✓ Shared with Claude.
 ```
 
 ---
 
-## Example: Payment
+## Why Dynamic Codes?
 
-```
-───────────────────────────────────
-.HMAN
-
-Request from Origin Energy
-
-Payment request: $145.00
-
-A) Share credit card
-B) Use BSB/Account
-C) Pay via PayID
-
-Reply A, B, or C
-───────────────────────────────────
-
-You: C
-
-───────────────────────────────────
-.HMAN
-
-✓ Paid via PayID. They never got your card.
-───────────────────────────────────
-```
+| Feature | Benefit |
+|---------|---------|
+| **60-second expiry** | Nothing to leak |
+| **You generate** | You're always in control |
+| **Single use** | One session per code |
+| **Via Signal** | E2E encrypted, private |
 
 ---
 
-## Why Signal?
+## Commands
 
-- **End-to-end encrypted** — Only you can read your messages
-- **Already on your phone** — No new app needed
-- **Trusted by millions** — Open source, battle-tested
-
----
-
-## Tech Stack
-
-| Component | Technology |
-|-----------|------------|
-| Web | Static HTML |
-| API | Node.js / Bun |
-| Signal | signal-cli |
-| Database | SQLite / Turso |
+| Send | Get |
+|------|-----|
+| `start` | Welcome + setup |
+| `code` | Session code (60s) |
+| `status` | Active connections |
+| `revoke` | End all sessions |
+| `help` | Command list |
 
 ---
 
-## Project Structure
+## For Developers
 
-```
-.hman/
-├── README.md          # This file
-├── VISION.md          # Why we built it
-├── PROTOCOL.md        # How it works
-├── ARCHITECTURE.md    # Technical details
-│
-├── apps/
-│   └── web-dashboard/
-│       └── public/
-│           └── index.html  # Landing page
-│
-└── packages/
-    ├── core/          # Core SDK
-    └── shared/        # Shared types
+See [PROTOCOL.md](PROTOCOL.md) for API docs.
+
+```typescript
+import { Hman } from '@hman/sdk';
+
+const session = await Hman.link('X7K3PQ', 'My App');
+const calendar = await session.request('calendar');
 ```
 
 ---
 
-## Get Started
+## Links
 
-Visit the landing page and enter your mobile number.
-
----
-
-## License
-
-MIT
+- [Vision](VISION.md) - Why we built this
+- [Protocol](PROTOCOL.md) - Technical details
+- [Architecture](ARCHITECTURE.md) - Code structure
 
 ---
 
-*Free. Open source. Your data, your control.*
+**Free. Open source. Your data, your control.**
+
+[GitHub](https://github.com/Tailor-AUS/Human-Managed-Access-Network)
