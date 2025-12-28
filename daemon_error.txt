@@ -20,3 +20,4 @@ WARN  ReceiveHelper - Connection closed unexpectedly, reconnecting in 100 ms
 WARN  ReceiveHelper - Connection closed unexpectedly, reconnecting in 100 ms
 WARN  ReceiveHelper - Connection closed unexpectedly, reconnecting in 100 ms
 WARN  ReceiveHelper - Connection closed unexpectedly, reconnecting in 100 ms
+WARN  ReceiveHelper - Connection closed unexpectedly, reconnecting in 100 ms
