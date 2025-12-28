@@ -4,9 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>.HMAN - Protect People. Enable AI.</title>
-    <meta name="description"
-        content="The .HMAN Protocol enables AI to work for you safely and securely. Free. Open source. For everyone.">
+    <title>.HMAN - Your Personal API</title>
+    <meta name="description" content="Create your .HMAN code. Connect any AI. Control everything via Signal.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -25,14 +24,13 @@
         }
 
         .container {
-            max-width: 800px;
+            max-width: 600px;
             margin: 0 auto;
             padding: 0 24px;
         }
 
-        /* Header */
         header {
-            padding: 24px 0;
+            padding: 20px 0;
             border-bottom: 1px solid #eee;
         }
 
@@ -43,7 +41,7 @@
         }
 
         .logo {
-            font-size: 1.25rem;
+            font-size: 1.2rem;
             font-weight: 700;
             color: #111;
             text-decoration: none;
@@ -55,11 +53,7 @@
             font-size: 0.9rem;
         }
 
-        .nav-link:hover {
-            color: #111;
-        }
-
-        /* Hero */
+        /* Hero with signup */
         .hero {
             padding: 80px 0 60px;
             text-align: center;
@@ -68,72 +62,202 @@
         .hero h1 {
             font-size: 2.5rem;
             font-weight: 700;
-            line-height: 1.2;
+            line-height: 1.15;
             margin-bottom: 16px;
-            letter-spacing: -0.02em;
+            letter-spacing: -0.03em;
         }
 
         .hero p {
-            font-size: 1.125rem;
-            color: #666;
-            max-width: 500px;
+            font-size: 1.1rem;
+            color: #555;
+            margin-bottom: 32px;
+        }
+
+        .signup-box {
+            background: #f8f8f8;
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 400px;
             margin: 0 auto;
         }
 
-        /* Mission */
-        .mission {
-            padding: 60px 0;
+        .signup-box h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 14px 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #111;
+        }
+
+        .btn {
+            padding: 14px 24px;
+            background: #111;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .btn:hover {
+            background: #333;
+        }
+
+        .signup-note {
+            font-size: 0.85rem;
+            color: #888;
+            margin-top: 12px;
+        }
+
+        section {
+            padding: 50px 0;
             border-top: 1px solid #eee;
         }
 
-        .mission-statement {
-            font-size: 1.25rem;
-            text-align: center;
-            max-width: 600px;
-            margin: 0 auto 40px;
-            color: #333;
-        }
-
-        .mission-points {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 32px;
-            text-align: center;
-        }
-
-        .mission-point h3 {
+        h3 {
             font-size: 1rem;
             font-weight: 600;
-            margin-bottom: 8px;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #999;
         }
 
-        .mission-point p {
-            font-size: 0.9rem;
+        .flow-step {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            align-items: flex-start;
+        }
+
+        .flow-step:last-child {
+            margin-bottom: 0;
+        }
+
+        .step-num {
+            width: 32px;
+            height: 32px;
+            background: #111;
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .step-content h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .step-content p {
+            font-size: 0.95rem;
             color: #666;
         }
 
-        /* How it works */
-        .how-it-works {
-            padding: 60px 0;
-            border-top: 1px solid #eee;
-        }
-
-        .section-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 32px;
-            text-align: center;
-        }
-
-        .example {
-            background: #f9f9f9;
-            border: 1px solid #eee;
-            border-radius: 8px;
+        .signal-demo {
+            background: #f8f8f8;
+            border-radius: 12px;
             padding: 24px;
-            margin-bottom: 24px;
+            margin-top: 24px;
         }
 
-        .example-header {
+        .signal-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .signal-icon {
+            width: 40px;
+            height: 40px;
+            background: #3a76f0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 1.2rem;
+        }
+
+        .signal-name {
+            font-weight: 600;
+        }
+
+        .signal-status {
+            font-size: 0.8rem;
+            color: #22c55e;
+        }
+
+        .chat {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .chat-msg {
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 0.9rem;
+            max-width: 85%;
+            line-height: 1.5;
+        }
+
+        .chat-msg.incoming {
+            background: #e8e8e8;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .chat-msg.outgoing {
+            background: #3a76f0;
+            color: #fff;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-msg .label {
+            font-size: 0.75rem;
+            opacity: 0.7;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .example-box {
+            background: #f8f8f8;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+
+        .example-title {
             font-size: 0.8rem;
             font-weight: 600;
             text-transform: uppercase;
@@ -142,152 +266,16 @@
             margin-bottom: 12px;
         }
 
-        .example-content {
-            font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
-            font-size: 0.9rem;
-            line-height: 1.8;
-        }
-
-        .example-content .from {
-            color: #666;
-        }
-
-        .example-content .message {
-            color: #111;
-            margin: 8px 0;
-        }
-
-        .example-content .options {
-            color: #333;
-            margin-top: 16px;
-        }
-
-        .example-content .reply {
-            color: #0066cc;
-            margin-top: 12px;
-        }
-
-        .example-content .result {
-            color: #22863a;
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid #ddd;
-        }
-
-        /* Protocol */
-        .protocol {
-            padding: 60px 0;
-            border-top: 1px solid #eee;
-        }
-
-        .protocol-stack {
-            background: #f9f9f9;
-            border: 1px solid #eee;
-            border-radius: 8px;
-            padding: 24px;
-        }
-
-        .protocol-layer {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            padding: 12px 0;
-            border-bottom: 1px solid #eee;
-        }
-
-        .protocol-layer:last-child {
-            border-bottom: none;
-        }
-
-        .layer-num {
-            width: 28px;
-            height: 28px;
-            background: #111;
-            color: #fff;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.8rem;
-            font-weight: 600;
-            flex-shrink: 0;
-        }
-
-        .layer-content h4 {
-            font-size: 0.95rem;
-            font-weight: 600;
-            margin-bottom: 2px;
-        }
-
-        .layer-content p {
-            font-size: 0.85rem;
-            color: #666;
-        }
-
-        /* Download */
-        .download {
-            padding: 60px 0;
-            border-top: 1px solid #eee;
-            text-align: center;
-        }
-
-        .download p {
-            color: #666;
-            margin-bottom: 24px;
-        }
-
-        .btn {
-            display: inline-block;
-            padding: 12px 24px;
-            background: #111;
-            color: #fff;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 500;
-            font-size: 0.9rem;
-        }
-
-        .btn:hover {
-            background: #333;
-        }
-
-        .btn-outline {
-            background: #fff;
-            color: #111;
-            border: 1px solid #ddd;
-            margin-left: 8px;
-        }
-
-        .btn-outline:hover {
-            background: #f9f9f9;
-        }
-
-        /* Footer */
         footer {
             padding: 40px 0;
             border-top: 1px solid #eee;
             text-align: center;
-        }
-
-        footer p {
             font-size: 0.85rem;
             color: #999;
         }
 
         footer a {
             color: #666;
-        }
-
-        /* Responsive */
-        @media (max-width: 600px) {
-            .hero h1 {
-                font-size: 1.75rem;
-            }
-
-            .mission-points {
-                grid-template-columns: 1fr;
-                gap: 24px;
-            }
         }
     </style>
 </head>
@@ -302,134 +290,194 @@
 
     <section class="hero">
         <div class="container">
-            <h1>Protect people.<br>Enable AI.</h1>
-            <p>The .HMAN Protocol lets AI work for you safely. You stay in control. Always.</p>
-        </div>
-    </section>
+            <h1>Your personal API.</h1>
+            <p>Connect any AI to your life. Control everything via Signal.</p>
 
-    <section class="mission">
-        <div class="container">
-            <p class="mission-statement">
-                We're not here to make money. We're here to ensure that as AI becomes more capable, humans remain in
-                control of their data and their choices.
-            </p>
-
-            <div class="mission-points">
-                <div class="mission-point">
-                    <h3>Free</h3>
-                    <p>No subscription. No premium tier. Just download and use.</p>
+            <div class="signup-box">
+                <h2>Get your .HMAN code</h2>
+                <div class="input-group">
+                    <input type="tel" placeholder="Mobile number" id="phone">
+                    <button class="btn" onclick="generateCode()">Continue on Signal</button>
                 </div>
-                <div class="mission-point">
-                    <h3>Open Source</h3>
-                    <p>Every line of code is public. Audit it yourself.</p>
-                </div>
-                <div class="mission-point">
-                    <h3>Local First</h3>
-                    <p>Runs on your device. Your data never leaves.</p>
-                </div>
+                <p class="signup-note">Requires <a href="https://signal.org/download/"
+                        style="color: #3a76f0;">Signal</a> for secure messaging.</p>
             </div>
         </div>
     </section>
 
-    <section class="how-it-works">
+    <section>
         <div class="container">
-            <h2 class="section-title">How it works</h2>
+            <h3>How it works</h3>
 
-            <div class="example">
-                <div class="example-header">Example: Payment</div>
-                <div class="example-content">
-                    <div class="from">Origin Energy requests $145.00</div>
-                    <div class="message">Your .HMAN asks:</div>
-                    <div class="options">
-                        A) Release credit card to them<br>
-                        B) I'll pay via BPay (5 days)<br>
-                        C) I'll pay via PayID (instant)
-                    </div>
-                    <div class="reply">You reply: C</div>
-                    <div class="result">✓ Paid. They never got your card.</div>
+            <div class="flow-step">
+                <div class="step-num">1</div>
+                <div class="step-content">
+                    <h4>Enter your mobile</h4>
+                    <p>We send you an SMS: "Reply YES to create your .HMAN"</p>
                 </div>
             </div>
 
-            <div class="example">
-                <div class="example-header">Example: AI Request</div>
-                <div class="example-content">
-                    <div class="from">Claude wants your calendar</div>
-                    <div class="message">Your .HMAN asks:</div>
-                    <div class="options">
-                        A) Share all meetings<br>
-                        B) Share non-private only<br>
-                        C) Share busy/free times only<br>
-                        D) Deny
-                    </div>
-                    <div class="reply">You reply: B</div>
-                    <div class="result">✓ Shared 9 meetings. 3 private hidden.</div>
+            <div class="flow-step">
+                <div class="step-num">2</div>
+                <div class="step-content">
+                    <h4>Verify on Signal</h4>
+                    <p>We message you on Signal to confirm your identity. (Need Signal? <a
+                            href="https://signal.org/download/">Download free</a>)</p>
                 </div>
             </div>
 
-            <div class="example">
-                <div class="example-header">Example: Meeting</div>
-                <div class="example-content">
-                    <div class="from">Sarah's .HMAN requests a 1-on-1</div>
-                    <div class="message">Your .HMAN asks:</div>
-                    <div class="options">
-                        A) Thursday 2pm<br>
-                        B) Friday 10am<br>
-                        C) Delay 1 week<br>
-                        D) Decline
-                    </div>
-                    <div class="reply">You reply: A</div>
-                    <div class="result">✓ Done. No emails. No back-and-forth.</div>
+            <div class="flow-step">
+                <div class="step-num">3</div>
+                <div class="step-content">
+                    <h4>Get your code</h4>
+                    <p>You receive your unique .HMAN code: <strong>HMAN-XXXX-XXXX</strong></p>
+                </div>
+            </div>
+
+            <div class="flow-step">
+                <div class="step-num">4</div>
+                <div class="step-content">
+                    <h4>Give code to any AI</h4>
+                    <p>Claude, GPT, Gemini—give them your code to connect</p>
+                </div>
+            </div>
+
+            <div class="flow-step">
+                <div class="step-num">5</div>
+                <div class="step-content">
+                    <h4>We ask, you decide</h4>
+                    <p>AI requests come to you via Signal. Reply to approve or deny.</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <section class="protocol">
+    <section>
         <div class="container">
-            <h2 class="section-title">The Protocol</h2>
+            <h3>All via Signal</h3>
+            <p style="color: #555; margin-bottom: 20px;">Every request comes to you as a simple message. End-to-end
+                encrypted.</p>
 
-            <div class="protocol-stack">
-                <div class="protocol-layer">
-                    <div class="layer-num">1</div>
-                    <div class="layer-content">
-                        <h4>E2E Encryption</h4>
-                        <p>Signal Protocol. Every message encrypted.</p>
+            <div class="signal-demo">
+                <div class="signal-header">
+                    <div class="signal-icon">🛡️</div>
+                    <div>
+                        <div class="signal-name">.HMAN</div>
+                        <div class="signal-status">● End-to-end encrypted</div>
                     </div>
                 </div>
-                <div class="protocol-layer">
-                    <div class="layer-num">2</div>
-                    <div class="layer-content">
-                        <h4>VPN Layer</h4>
-                        <p>Your choice of provider. Location anonymity.</p>
+                <div class="chat">
+                    <div class="chat-msg incoming">
+                        <span class="label">Request from Claude</span>
+                        Claude wants your calendar for project planning.<br><br>
+                        Reply <strong>Y</strong> to approve<br>
+                        Reply <strong>N</strong> to deny
                     </div>
-                </div>
-                <div class="protocol-layer">
-                    <div class="layer-num">3</div>
-                    <div class="layer-content">
-                        <h4>Signal Interface</h4>
-                        <p>Simple messages. Y/N responses. Human-readable.</p>
+                    <div class="chat-msg outgoing">Y</div>
+                    <div class="chat-msg incoming">
+                        ✓ Shared your calendar with Claude.<br>
+                        <span style="opacity: 0.7;">They can see meetings for next 7 days.</span>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <section class="download">
+    <section>
         <div class="container">
-            <h2 class="section-title">Get Started</h2>
-            <p>Download .HMAN. Runs locally. Free forever.</p>
-            <a href="#" class="btn">Download</a>
-            <a href="https://github.com/Tailor-AUS/Human-Managed-Access-Network" class="btn btn-outline">View Source</a>
+            <h3>Examples</h3>
+
+            <div class="example-box">
+                <div class="example-title">Payment Request</div>
+                <div class="chat">
+                    <div class="chat-msg incoming">
+                        <span class="label">From: Origin Energy</span>
+                        Payment request: $145.00<br><br>
+                        A) Share credit card<br>
+                        B) Use BSB/Account instead<br>
+                        C) Pay via PayID
+                    </div>
+                    <div class="chat-msg outgoing">C</div>
+                    <div class="chat-msg incoming">✓ Paid via PayID. They never got your card.</div>
+                </div>
+            </div>
+
+            <div class="example-box">
+                <div class="example-title">Meeting Request</div>
+                <div class="chat">
+                    <div class="chat-msg incoming">
+                        <span class="label">From: Richard's .HMAN</span>
+                        Richard wants to organize dinner.<br><br>
+                        A) Thursday 7pm<br>
+                        B) Saturday 6pm<br>
+                        C) Suggest another time
+                    </div>
+                    <div class="chat-msg outgoing">A</div>
+                    <div class="chat-msg incoming">✓ Dinner with Richard confirmed. Thursday 7pm.</div>
+                </div>
+            </div>
+
+            <div class="example-box">
+                <div class="example-title">AI Task</div>
+                <div class="chat">
+                    <div class="chat-msg incoming">
+                        <span class="label">From: Your AI Assistant</span>
+                        "Call Richard Goldsworthy to organize dinner"<br><br>
+                        A) Approve this call<br>
+                        B) Deny
+                    </div>
+                    <div class="chat-msg outgoing">A</div>
+                    <div class="chat-msg incoming">✓ Calling Richard now...</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <div class="container">
+            <h3>Why Signal?</h3>
+            <div class="flow-step">
+                <div class="step-num">🔒</div>
+                <div class="step-content">
+                    <h4>End-to-end encrypted</h4>
+                    <p>Only you can read your messages. Not us. Not anyone.</p>
+                </div>
+            </div>
+            <div class="flow-step">
+                <div class="step-num">📱</div>
+                <div class="step-content">
+                    <h4>Already on your phone</h4>
+                    <p>No new app to download. Just use Signal.</p>
+                </div>
+            </div>
+            <div class="flow-step">
+                <div class="step-num">🌍</div>
+                <div class="step-content">
+                    <h4>Trusted by millions</h4>
+                    <p>Journalists, activists, security experts. Open source.</p>
+                </div>
+            </div>
         </div>
     </section>
 
     <footer>
         <div class="container">
-            <p><strong>.HMAN</strong> — Protect people. Enable AI.</p>
+            <p><strong>.HMAN</strong> — Your personal API. All via Signal.</p>
             <p style="margin-top: 8px;">Free. Open source. <a
                     href="https://github.com/Tailor-AUS/Human-Managed-Access-Network">GitHub</a></p>
         </div>
     </footer>
+
+    <script>
+        function generateCode() {
+            const phone = document.getElementById('phone').value;
+            if (phone) {
+                alert('SMS sent to ' + phone + '!\n\nReply YES to create your .HMAN code.\n\n(Demo only - full signup coming soon)');
+            } else {
+                alert('Please enter your mobile number');
+            }
+        }
+    </script>
 </body>
 
 </html>
