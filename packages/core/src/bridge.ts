@@ -1,58 +1,81 @@
 /**
  * HMAN Bridge
  * 
- * Connects AI requests (via MCP or API) to the Signal client.
- * This is a simplified bridge that handles session codes and approval flow.
+ * Connects AI to Signal client with full trust level support.
  * 
- * Architecture:
- * 
- *   ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
- *   │  Claude/GPT/AI  │ ──► │     Bridge      │ ──► │  Signal Client  │
- *   │                 │     │                 │     │                 │
- *   │  Uses session   │     │ Session mgmt    │     │  Sends/receives │
- *   │  code to link   │     │ Request relay   │     │  via Signal     │
- *   └─────────────────┘     └─────────────────┘     └────────┬────────┘
- *                                                            │
- *                                                            ▼
- *                                                   ┌─────────────────┐
- *                                                   │     User        │
- *                                                   │   (Signal app)  │
- *                                                   │                 │
- *                                                   │  Replies Y/N    │
- *                                                   └─────────────────┘
+ * Trust Levels:
+ * - Level 1: Manual - user provides data on response
+ * - Level 2: Connected - auto-fetch from OAuth services after approval
+ * - Level 3: Pre-Approved - auto-approve based on rules
  */
 
-import { createSignalClient, SignalClient, Session } from './signal/index.js';
+import {
+    createSignalClient,
+    SignalClient,
+    Session,
+    TrustLevel,
+    User,
+    RequestResponse,
+} from './signal/index.js';
 
 export interface BridgeConfig {
-    /** Signal phone number (with country code) */
     phoneNumber: string;
-    /** Signal-cli path */
     signalCliPath?: string;
-    /** Default timeout for approval requests (ms) */
     approvalTimeout?: number;
 }
 
 export interface DataRequest {
-    /** What is being requested */
-    resource: string;
-    /** Purpose of the request */
-    purpose?: string;
-    /** Available options (default Y/N) */
-    options?: string[];
+    type: string;           // 'calendar', 'contacts', etc.
+    purpose?: string;       // Why the AI needs it
+    scopes?: string[];      // Specific scopes requested
 }
 
-export interface ApprovalResult {
-    /** Whether the request was approved */
+export interface DataResponse {
     approved: boolean;
-    /** The user's response (Y, N, A, B, C, etc.) */
-    response: string | null;
-    /** Reason for denial (if denied) */
+    autoApproved: boolean;
+    trustLevel: TrustLevel;
+    data?: unknown;
     reason?: string;
+    providedBy: 'user' | 'connection' | 'auto';
 }
 
 /**
- * HMAN Bridge - connects AI to Signal
+ * Mock data fetcher - in production would use real OAuth
+ */
+async function fetchFromConnection(
+    user: User,
+    dataType: string
+): Promise<unknown | null> {
+    const connection = user.connections.find(c => {
+        // Map data types to services
+        if (dataType === 'calendar' && c.service === 'google') return true;
+        if (dataType === 'contacts' && c.service === 'google') return true;
+        if (dataType === 'email' && c.service === 'microsoft') return true;
+        return false;
+    });
+
+    if (!connection) return null;
+
+    // Mock data - in production, would call real APIs
+    const mockData: Record<string, unknown> = {
+        calendar: [
+            { title: 'Team Standup', date: '2024-01-15 09:00' },
+            { title: 'Project Review', date: '2024-01-15 14:00' },
+        ],
+        contacts: [
+            { name: 'Alice', email: 'alice@example.com' },
+            { name: 'Bob', email: 'bob@example.com' },
+        ],
+        email: [
+            { subject: 'Meeting Notes', from: 'team@company.com' },
+        ],
+    };
+
+    return mockData[dataType] || null;
+}
+
+/**
+ * HMAN Bridge
  */
 export class HmanBridge {
     private signal: SignalClient;
@@ -61,197 +84,210 @@ export class HmanBridge {
 
     constructor(config: BridgeConfig) {
         this.config = {
-            approvalTimeout: 60000, // 1 minute
+            approvalTimeout: 60000,
             ...config,
         };
 
-        // Create Signal client
         this.signal = createSignalClient({
             phoneNumber: config.phoneNumber,
             signalCliPath: config.signalCliPath,
         });
     }
 
-    /**
-     * Start the bridge
-     */
     async start(): Promise<void> {
-        console.log('[Bridge] Starting HMAN Bridge...');
+        console.log('[Bridge] Starting...');
         await this.signal.start();
-        console.log('[Bridge] Bridge started');
+        console.log('[Bridge] Started');
     }
 
-    /**
-     * Stop the bridge
-     */
     async stop(): Promise<void> {
         await this.signal.stop();
-        console.log('[Bridge] Bridge stopped');
+        console.log('[Bridge] Stopped');
     }
 
-    /**
-     * Get the Signal client (for handling incoming messages)
-     */
     getSignalClient(): SignalClient {
         return this.signal;
     }
 
-    /**
-     * Link a session code from an AI
-     */
     async link(code: string, serviceName: string): Promise<Session | null> {
         const session = await this.signal.linkSession(code, serviceName);
         if (session) {
             this.activeSession = session;
-            console.log(`[Bridge] Linked session: ${session.id} for ${serviceName}`);
+            console.log(`[Bridge] Linked: ${session.id} for ${serviceName}`);
         }
         return session;
     }
 
-    /**
-     * Get the active session
-     */
     getActiveSession(): Session | null {
         return this.activeSession;
     }
 
     /**
-     * Request approval from the user for data access
+     * Request data from user - respects trust levels
      */
-    async requestDataApproval(request: DataRequest): Promise<ApprovalResult> {
+    async requestData(request: DataRequest): Promise<DataResponse> {
         if (!this.activeSession) {
             return {
                 approved: false,
-                response: null,
-                reason: 'No active session. User must generate a session code first.',
+                autoApproved: false,
+                trustLevel: TrustLevel.Manual,
+                reason: 'No active session',
+                providedBy: 'user',
             };
         }
 
-        // Format the request message
-        const message = this.formatRequest(request);
-        const options = request.options || ['Y', 'N'];
+        const user = this.signal.getUser(this.activeSession.userPhone);
+        if (!user) {
+            return {
+                approved: false,
+                autoApproved: false,
+                trustLevel: TrustLevel.Manual,
+                reason: 'User not found',
+                providedBy: 'user',
+            };
+        }
 
-        // Request approval via Signal
+        // Request approval (handles Level 3 auto-approve internally)
         const response = await this.signal.requestApproval(
             this.activeSession.id,
-            message,
-            options,
+            request.type,
+            request.purpose,
+            ['Y', 'N'],
             this.config.approvalTimeout
         );
 
-        if (!response) {
+        if (!response.approved) {
             return {
                 approved: false,
-                response: null,
-                reason: 'Request timed out or was not answered.',
+                autoApproved: false,
+                trustLevel: user.trustLevel,
+                reason: response.response === 'N' ? 'User denied' : 'Request timed out',
+                providedBy: 'user',
             };
         }
 
-        // Interpret response
-        const approved = response === 'Y' || response === 'A';
-
-        return {
-            approved,
-            response,
-            reason: approved ? undefined : `User responded: ${response}`,
-        };
-    }
-
-    /**
-     * Request approval for a payment
-     */
-    async requestPaymentApproval(
-        payee: string,
-        amount: number,
-        currency: string = 'AUD'
-    ): Promise<ApprovalResult & { method?: string }> {
-        if (!this.activeSession) {
+        // ===================
+        // LEVEL 1: Manual - user will provide data
+        // ===================
+        if (user.trustLevel === TrustLevel.Manual) {
             return {
-                approved: false,
-                response: null,
-                reason: 'No active session.',
+                approved: true,
+                autoApproved: false,
+                trustLevel: TrustLevel.Manual,
+                data: null, // User will provide via Signal
+                providedBy: 'user',
             };
         }
 
-        const message = `Payment to ${payee}\n\nAmount: ${currency} ${amount.toFixed(2)}`;
-        const options = ['A', 'B', 'C', 'N'];
-
-        const response = await this.signal.requestApproval(
-            this.activeSession.id,
-            `${message}\n\nA) Share credit card\nB) Use BSB/Account\nC) Pay via PayID\nN) Deny`,
-            options,
-            this.config.approvalTimeout
-        );
-
-        if (!response || response === 'N') {
-            return {
-                approved: false,
-                response,
-                reason: response === 'N' ? 'User denied payment.' : 'Request timed out.',
-            };
-        }
-
-        const methods: Record<string, string> = {
-            A: 'credit_card',
-            B: 'bsb_account',
-            C: 'payid',
-        };
+        // ===================
+        // LEVEL 2 & 3: Connected - fetch from OAuth
+        // ===================
+        const data = await fetchFromConnection(user, request.type);
 
         return {
             approved: true,
-            response,
-            method: methods[response],
+            autoApproved: response.autoApproved || false,
+            trustLevel: user.trustLevel,
+            data,
+            providedBy: data ? 'connection' : 'user',
         };
     }
 
     /**
-     * Request approval for an action
+     * Request a payment
      */
-    async requestActionApproval(
-        action: string,
-        description?: string
-    ): Promise<ApprovalResult> {
+    async requestPayment(
+        payee: string,
+        amount: number,
+        currency: string = 'AUD'
+    ): Promise<DataResponse & { method?: string }> {
         if (!this.activeSession) {
             return {
                 approved: false,
-                response: null,
-                reason: 'No active session.',
+                autoApproved: false,
+                trustLevel: TrustLevel.Manual,
+                reason: 'No active session',
+                providedBy: 'user',
             };
         }
 
-        let message = `Action: ${action}`;
-        if (description) {
-            message += `\n\n${description}`;
+        const user = this.signal.getUser(this.activeSession.userPhone);
+        if (!user) {
+            return {
+                approved: false,
+                autoApproved: false,
+                trustLevel: TrustLevel.Manual,
+                reason: 'User not found',
+                providedBy: 'user',
+            };
+        }
+
+        // Payments always require explicit approval (never auto-approved)
+        const message = `Payment: ${currency} ${amount.toFixed(2)} to ${payee}`;
+
+        await this.signal.sendMessage(
+            this.activeSession.userPhone,
+            `${message}\n\nA) Share card\nB) BSB/Account\nC) PayID\nN) Deny`
+        );
+
+        // For now, return pending - in production would wait for response
+        return {
+            approved: false,
+            autoApproved: false,
+            trustLevel: user.trustLevel,
+            reason: 'Awaiting payment approval',
+            providedBy: 'user',
+        };
+    }
+
+    /**
+     * Request to perform an action
+     */
+    async requestAction(
+        action: string,
+        description?: string
+    ): Promise<DataResponse> {
+        if (!this.activeSession) {
+            return {
+                approved: false,
+                autoApproved: false,
+                trustLevel: TrustLevel.Manual,
+                reason: 'No active session',
+                providedBy: 'user',
+            };
+        }
+
+        const user = this.signal.getUser(this.activeSession.userPhone);
+        if (!user) {
+            return {
+                approved: false,
+                autoApproved: false,
+                trustLevel: TrustLevel.Manual,
+                reason: 'User not found',
+                providedBy: 'user',
+            };
         }
 
         const response = await this.signal.requestApproval(
             this.activeSession.id,
-            message,
+            action,
+            description,
             ['Y', 'N'],
             this.config.approvalTimeout
         );
 
         return {
-            approved: response === 'Y',
-            response,
-            reason: response === 'N' ? 'User denied the action.' : undefined,
+            approved: response.approved,
+            autoApproved: response.autoApproved || false,
+            trustLevel: user.trustLevel,
+            reason: response.approved ? undefined : 'User denied',
+            providedBy: response.autoApproved ? 'auto' : 'user',
         };
-    }
-
-    /**
-     * Format a data request for display in Signal
-     */
-    private formatRequest(request: DataRequest): string {
-        let message = `Wants: ${request.resource}`;
-        if (request.purpose) {
-            message += `\n\nPurpose: ${request.purpose}`;
-        }
-        return message;
     }
 }
 
 /**
- * Create an HMAN Bridge
+ * Create a Bridge
  */
 export function createBridge(config: BridgeConfig): HmanBridge {
     return new HmanBridge(config);
