@@ -2,214 +2,220 @@
 
 ## Overview
 
-The .HMAN Protocol defines how requests flow from AIs, businesses, and people to you—and how you respond.
+.HMAN uses **dynamic session codes** instead of permanent identifiers. When you need to connect an AI, you generate a fresh code that expires in 60 seconds.
 
 ---
 
 ## The Flow
 
 ```
-   ┌─────────────┐
-   │ AI/Business │
-   │ or Person   │
-   └──────┬──────┘
-          │
-          │ 1. Send request to HMAN code
-          ▼
-   ┌─────────────┐
-   │   .HMAN     │
-   │   Server    │
-   └──────┬──────┘
-          │
-          │ 2. Relay via Signal
-          ▼
-   ┌─────────────┐
-   │   Signal    │
-   │  (on phone) │
-   └──────┬──────┘
-          │
-          │ 3. User reads message
-          ▼
-   ┌─────────────┐
-   │    YOU      │
-   └──────┬──────┘
-          │
-          │ 4. Reply Y/N or A/B/C
-          ▼
-   ┌─────────────┐
-   │   .HMAN     │
-   │   Server    │
-   └──────┬──────┘
-          │
-          │ 5. Execute action or return data
-          ▼
-   ┌─────────────┐
-   │ AI/Business │
-   └─────────────┘
+┌───────────────────────────────────────────────────────────────────┐
+│                                                                   │
+│  YOU                        .HMAN                        AI       │
+│                                                                   │
+│   │                           │                           │       │
+│   │ "code"                    │                           │       │
+│   │─────────────────────────►│                           │       │
+│   │                           │                           │       │
+│   │ "X7K3PQ (60 sec)"         │                           │       │
+│   │◄─────────────────────────│                           │       │
+│   │                           │                           │       │
+│   │                           │    "Link with X7K3PQ"     │       │
+│   │                           │◄──────────────────────────│       │
+│   │                           │                           │       │
+│   │                           │    "Linked ✓"             │       │
+│   │                           │──────────────────────────►│       │
+│   │                           │                           │       │
+│   │                           │    "Wants calendar"       │       │
+│   │                           │◄──────────────────────────│       │
+│   │                           │                           │       │
+│   │ "Claude wants calendar.   │                           │       │
+│   │  Y/N?"                    │                           │       │
+│   │◄─────────────────────────│                           │       │
+│   │                           │                           │       │
+│   │ "Y"                       │                           │       │
+│   │─────────────────────────►│                           │       │
+│   │                           │                           │       │
+│   │                           │    "Here's calendar"      │       │
+│   │                           │──────────────────────────►│       │
+│   │                           │                           │       │
+└───────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## HMAN Code Format
+## Session Codes
 
-Your unique identifier:
-
+### Format
 ```
-HMAN-XXXX-XXXX
+6 alphanumeric characters
+Example: X7K3PQ
 ```
 
-Example: `HMAN-7K3F-X9P2`
+### Properties
+- **Valid for 60 seconds** (configurable)
+- **Single use** - once linked, code is consumed
+- **Case insensitive** - X7K3PQ = x7k3pq
+- **Your eyes only** - sent only to your Signal
 
-- 8 alphanumeric characters
-- Case insensitive
-- Easy to share verbally or in text
+### Why Dynamic Codes?
+
+| Static ID | Dynamic Code |
+|-----------|--------------|
+| Permanent | Expires in 60s |
+| Can be leaked | Nothing to leak |
+| One ID forever | Fresh each time |
+| You share once | You initiate each time |
+
+---
+
+## Commands
+
+Message these to .HMAN on Signal:
+
+| Command | Response |
+|---------|----------|
+| `start` | Welcome message, setup complete |
+| `code` | Your 6-char session code (60s) |
+| `status` | Active sessions and connections |
+| `revoke` | End all active sessions |
+| `help` | List of commands |
 
 ---
 
 ## Request Types
 
-### 1. Data Request
-AI wants access to your data (calendar, contacts, etc.)
-
+### Data Request
 ```
-───────────────────────────
-Request from Claude
-
-Wants: Your calendar
-Purpose: Project planning
+───────────────────────────────
+Claude wants your calendar.
 
 Y to approve
 N to deny
-───────────────────────────
+───────────────────────────────
 ```
 
-### 2. Payment Request
-Business wants payment
-
+### Payment Request
 ```
-───────────────────────────
-Request from Origin Energy
+───────────────────────────────
+Origin Energy: $145.00
 
-Amount: $145.00
-For: Electricity (March)
+A) Share card
+B) BSB/Account
+C) PayID
 
-A) Share credit card
-B) Use BSB/Account
-C) Pay via PayID
-───────────────────────────
+Reply A, B, or C
+───────────────────────────────
 ```
 
-### 3. Meeting Request
-Someone wants to schedule time
-
+### Action Request
 ```
-───────────────────────────
-Request from Sarah's .HMAN
+───────────────────────────────
+Your AI wants to call Richard
+to organize dinner.
 
-1-on-1 meeting
-Topic: Q2 Goals
-
-A) Thursday 2pm
-B) Friday 10am
-C) Decline
-───────────────────────────
-```
-
-### 4. Action Request
-AI wants to do something on your behalf
-
-```
-───────────────────────────
-Request from Your Assistant
-
-"Call Richard to organize dinner"
-
-A) Approve call
-B) Deny
-───────────────────────────
+Y to approve
+N to deny
+───────────────────────────────
 ```
 
 ---
 
-## Response Format
+## For AI Developers
 
-Simple replies:
-- `Y` / `N` for yes/no
-- `A` / `B` / `C` for options
-- Free text for custom responses
+### Link to a User
+
+```
+POST /api/link
+{
+  "code": "X7K3PQ",
+  "service_name": "My AI App"
+}
+
+Response:
+{
+  "session_id": "sess_abc123",
+  "linked": true,
+  "expires_at": "2024-01-15T12:30:00Z"
+}
+```
+
+### Send a Request
+
+```
+POST /api/request
+{
+  "session_id": "sess_abc123",
+  "type": "data",
+  "message": "Wants your calendar",
+  "options": ["Y", "N"]
+}
+
+Response:
+{
+  "request_id": "req_xyz789",
+  "status": "pending"
+}
+```
+
+### Get Response
+
+```
+GET /api/request/req_xyz789
+
+Response:
+{
+  "status": "approved",
+  "response": "Y",
+  "data": { ... }
+}
+```
+
+---
+
+## SDK Example
+
+```typescript
+import { Hman } from '@hman/sdk';
+
+const hman = new Hman();
+
+// Link with user's session code
+const session = await hman.link('X7K3PQ', 'My AI App');
+
+// Request calendar access
+const request = await session.request({
+  message: 'Wants your calendar for scheduling',
+  options: ['Y', 'N']
+});
+
+// Wait for user response
+const response = await request.waitForResponse();
+
+if (response.approved) {
+  const calendar = response.data;
+}
+
+// Session ends when user revokes or it expires
+```
 
 ---
 
 ## Security
 
-### End-to-End Encryption
-All messages via Signal Protocol. No one—not even .HMAN—can read your messages in transit.
+### Code Generation
+- Cryptographically random
+- 6 chars = 2 billion combinations
+- Rate limited per user
 
-### Phone Verification
-Your HMAN code is tied to your phone number. Only you can receive and respond to requests.
+### Session Expiry
+- Codes expire in 60 seconds
+- Sessions expire after 24 hours of inactivity
+- User can revoke anytime
 
 ### Audit Trail
-Every request and response is logged (on your side). You can see:
-- Who requested what
-- When you approved/denied
-- What was shared/executed
+Every request and response is logged on your device.
 
 ---
 
-## API Reference
-
-### Create Account
-```
-POST /api/signup
-{ "phone": "+61412345678" }
-```
-
-### Send Request
-```
-POST /api/request
-{
-  "hman_code": "HMAN-7K3F-X9P2",
-  "from": "Claude",
-  "type": "data_request",
-  "message": "Wants your calendar",
-  "options": [
-    { "key": "Y", "label": "Approve" },
-    { "key": "N", "label": "Deny" }
-  ]
-}
-```
-
-### Check Response
-```
-GET /api/request/:id
-```
-
----
-
-## SDK Usage
-
-```typescript
-import { HmanClient } from '@hman/sdk';
-
-const client = new HmanClient();
-
-// Send a request
-const request = await client.request({
-  hmanCode: 'HMAN-7K3F-X9P2',
-  from: 'My AI App',
-  message: 'Wants your calendar for scheduling',
-  options: ['Y', 'N']
-});
-
-// Wait for response
-const response = await client.waitForResponse(request.id);
-
-if (response.approved) {
-  const calendar = response.data;
-  // Use the calendar data
-}
-```
-
----
-
-*Simple. Secure. Signal.*
+*Dynamic. Secure. You're always in control.*

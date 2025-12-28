@@ -5,7 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>.HMAN - Your Personal API</title>
-    <meta name="description" content="Create your .HMAN code. Connect any AI. Control everything via Signal.">
+    <meta name="description"
+        content=".HMAN lets you control what AI can access. Generate a session code via Signal. Use it to connect any AI.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -53,7 +54,6 @@
             font-size: 0.9rem;
         }
 
-        /* Hero with signup */
         .hero {
             padding: 80px 0 60px;
             text-align: center;
@@ -73,60 +73,37 @@
             margin-bottom: 32px;
         }
 
-        .signup-box {
+        .cta-box {
             background: #f8f8f8;
             border-radius: 12px;
             padding: 32px;
-            max-width: 400px;
-            margin: 0 auto;
+            text-align: center;
         }
 
-        .signup-box h2 {
+        .cta-box h2 {
             font-size: 1.1rem;
             font-weight: 600;
-            margin-bottom: 20px;
-        }
-
-        .input-group {
-            display: flex;
-            gap: 8px;
             margin-bottom: 16px;
         }
 
-        .input-group input {
-            flex: 1;
-            padding: 14px 16px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-family: inherit;
-        }
-
-        .input-group input:focus {
-            outline: none;
-            border-color: #111;
+        .cta-box p {
+            color: #666;
+            margin-bottom: 20px;
         }
 
         .btn {
-            padding: 14px 24px;
+            display: inline-block;
+            padding: 14px 28px;
             background: #111;
             color: #fff;
-            border: none;
+            text-decoration: none;
             border-radius: 8px;
             font-size: 1rem;
             font-weight: 500;
-            cursor: pointer;
-            font-family: inherit;
         }
 
         .btn:hover {
             background: #333;
-        }
-
-        .signup-note {
-            font-size: 0.85rem;
-            color: #888;
-            margin-top: 12px;
         }
 
         section {
@@ -243,11 +220,18 @@
             border-bottom-right-radius: 4px;
         }
 
-        .chat-msg .label {
-            font-size: 0.75rem;
-            opacity: 0.7;
+        .chat-msg .code {
+            font-family: 'SF Mono', Consolas, monospace;
+            font-size: 1.2rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
             display: block;
-            margin-bottom: 4px;
+            margin: 8px 0;
+        }
+
+        .chat-msg .expire {
+            font-size: 0.8rem;
+            opacity: 0.7;
         }
 
         .example-box {
@@ -266,6 +250,24 @@
             margin-bottom: 12px;
         }
 
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            text-align: center;
+        }
+
+        .feature h4 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .feature p {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
         footer {
             padding: 40px 0;
             border-top: 1px solid #eee;
@@ -276,6 +278,16 @@
 
         footer a {
             color: #666;
+        }
+
+        @media (max-width: 600px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -290,17 +302,13 @@
 
     <section class="hero">
         <div class="container">
-            <h1>Your personal API.</h1>
-            <p>Connect any AI to your life. Control everything via Signal.</p>
+            <h1>Connect AI to your life.<br>You stay in control.</h1>
+            <p>Message .HMAN on Signal. Generate a code. Give it to any AI. Done.</p>
 
-            <div class="signup-box">
-                <h2>Get your .HMAN code</h2>
-                <div class="input-group">
-                    <input type="tel" placeholder="Mobile number" id="phone">
-                    <button class="btn" onclick="generateCode()">Continue on Signal</button>
-                </div>
-                <p class="signup-note">Requires <a href="https://signal.org/download/"
-                        style="color: #3a76f0;">Signal</a> for secure messaging.</p>
+            <div class="cta-box">
+                <h2>Get started on Signal</h2>
+                <p>Add .HMAN on Signal. Generate session codes on demand.</p>
+                <a href="https://signal.me/#p/+61400000000" class="btn">Open in Signal</a>
             </div>
         </div>
     </section>
@@ -312,41 +320,40 @@
             <div class="flow-step">
                 <div class="step-num">1</div>
                 <div class="step-content">
-                    <h4>Enter your mobile</h4>
-                    <p>We send you an SMS: "Reply YES to create your .HMAN"</p>
+                    <h4>Add .HMAN on Signal</h4>
+                    <p>One-time setup. Find us on Signal and send "start".</p>
                 </div>
             </div>
 
             <div class="flow-step">
                 <div class="step-num">2</div>
                 <div class="step-content">
-                    <h4>Verify on Signal</h4>
-                    <p>We message you on Signal to confirm your identity. (Need Signal? <a
-                            href="https://signal.org/download/">Download free</a>)</p>
+                    <h4>Generate a code</h4>
+                    <p>Anytime you need to connect an AI, send "code" to .HMAN.</p>
                 </div>
             </div>
 
             <div class="flow-step">
                 <div class="step-num">3</div>
                 <div class="step-content">
-                    <h4>Get your code</h4>
-                    <p>You receive your unique .HMAN code: <strong>HMAN-XXXX-XXXX</strong></p>
+                    <h4>Get a session code</h4>
+                    <p>We reply with a 6-character code, valid for 60 seconds.</p>
                 </div>
             </div>
 
             <div class="flow-step">
                 <div class="step-num">4</div>
                 <div class="step-content">
-                    <h4>Give code to any AI</h4>
-                    <p>Claude, GPT, Gemini—give them your code to connect</p>
+                    <h4>Give code to AI</h4>
+                    <p>Tell Claude, GPT, or any service your code. They link to your session.</p>
                 </div>
             </div>
 
             <div class="flow-step">
                 <div class="step-num">5</div>
                 <div class="step-content">
-                    <h4>We ask, you decide</h4>
-                    <p>AI requests come to you via Signal. Reply to approve or deny.</p>
+                    <h4>Approve requests</h4>
+                    <p>When they want data or actions, we ask you on Signal. You reply Y/N.</p>
                 </div>
             </div>
         </div>
@@ -354,9 +361,7 @@
 
     <section>
         <div class="container">
-            <h3>All via Signal</h3>
-            <p style="color: #555; margin-bottom: 20px;">Every request comes to you as a simple message. End-to-end
-                encrypted.</p>
+            <h3>Generate a code</h3>
 
             <div class="signal-demo">
                 <div class="signal-header">
@@ -367,16 +372,11 @@
                     </div>
                 </div>
                 <div class="chat">
+                    <div class="chat-msg outgoing">code</div>
                     <div class="chat-msg incoming">
-                        <span class="label">Request from Claude</span>
-                        Claude wants your calendar for project planning.<br><br>
-                        Reply <strong>Y</strong> to approve<br>
-                        Reply <strong>N</strong> to deny
-                    </div>
-                    <div class="chat-msg outgoing">Y</div>
-                    <div class="chat-msg incoming">
-                        ✓ Shared your calendar with Claude.<br>
-                        <span style="opacity: 0.7;">They can see meetings for next 7 days.</span>
+                        Your session code:
+                        <span class="code">X7K3PQ</span>
+                        <span class="expire">Valid for 60 seconds</span>
                     </div>
                 </div>
             </div>
@@ -385,49 +385,53 @@
 
     <section>
         <div class="container">
-            <h3>Examples</h3>
+            <h3>Then AI asks, you decide</h3>
 
             <div class="example-box">
-                <div class="example-title">Payment Request</div>
+                <div class="example-title">Calendar access</div>
                 <div class="chat">
                     <div class="chat-msg incoming">
-                        <span class="label">From: Origin Energy</span>
-                        Payment request: $145.00<br><br>
-                        A) Share credit card<br>
-                        B) Use BSB/Account instead<br>
-                        C) Pay via PayID
+                        Claude wants your calendar.<br><br>
+                        <strong>Y</strong> to approve<br>
+                        <strong>N</strong> to deny
+                    </div>
+                    <div class="chat-msg outgoing">Y</div>
+                    <div class="chat-msg incoming">✓ Shared calendar with Claude.</div>
+                </div>
+            </div>
+
+            <div class="example-box">
+                <div class="example-title">Payment</div>
+                <div class="chat">
+                    <div class="chat-msg incoming">
+                        Origin Energy: $145.00<br><br>
+                        <strong>A</strong>) Share card<br>
+                        <strong>B</strong>) Use BSB<br>
+                        <strong>C</strong>) PayID
                     </div>
                     <div class="chat-msg outgoing">C</div>
                     <div class="chat-msg incoming">✓ Paid via PayID. They never got your card.</div>
                 </div>
             </div>
+        </div>
+    </section>
 
-            <div class="example-box">
-                <div class="example-title">Meeting Request</div>
-                <div class="chat">
-                    <div class="chat-msg incoming">
-                        <span class="label">From: Richard's .HMAN</span>
-                        Richard wants to organize dinner.<br><br>
-                        A) Thursday 7pm<br>
-                        B) Saturday 6pm<br>
-                        C) Suggest another time
-                    </div>
-                    <div class="chat-msg outgoing">A</div>
-                    <div class="chat-msg incoming">✓ Dinner with Richard confirmed. Thursday 7pm.</div>
+    <section>
+        <div class="container">
+            <h3>Why session codes?</h3>
+
+            <div class="feature-grid">
+                <div class="feature">
+                    <h4>No permanent ID</h4>
+                    <p>Nothing to leak. Codes expire in 60 seconds.</p>
                 </div>
-            </div>
-
-            <div class="example-box">
-                <div class="example-title">AI Task</div>
-                <div class="chat">
-                    <div class="chat-msg incoming">
-                        <span class="label">From: Your AI Assistant</span>
-                        "Call Richard Goldsworthy to organize dinner"<br><br>
-                        A) Approve this call<br>
-                        B) Deny
-                    </div>
-                    <div class="chat-msg outgoing">A</div>
-                    <div class="chat-msg incoming">✓ Calling Richard now...</div>
+                <div class="feature">
+                    <h4>You initiate</h4>
+                    <p>Only you can generate a code. You're always in control.</p>
+                </div>
+                <div class="feature">
+                    <h4>One-time use</h4>
+                    <p>Each code links one session. Generate fresh each time.</p>
                 </div>
             </div>
         </div>
@@ -436,25 +440,19 @@
     <section>
         <div class="container">
             <h3>Why Signal?</h3>
-            <div class="flow-step">
-                <div class="step-num">🔒</div>
-                <div class="step-content">
-                    <h4>End-to-end encrypted</h4>
-                    <p>Only you can read your messages. Not us. Not anyone.</p>
+
+            <div class="feature-grid">
+                <div class="feature">
+                    <h4>E2E encrypted</h4>
+                    <p>Only you can read your messages.</p>
                 </div>
-            </div>
-            <div class="flow-step">
-                <div class="step-num">📱</div>
-                <div class="step-content">
-                    <h4>Already on your phone</h4>
-                    <p>No new app to download. Just use Signal.</p>
+                <div class="feature">
+                    <h4>Already trusted</h4>
+                    <p>Used by millions. Open source.</p>
                 </div>
-            </div>
-            <div class="flow-step">
-                <div class="step-num">🌍</div>
-                <div class="step-content">
-                    <h4>Trusted by millions</h4>
-                    <p>Journalists, activists, security experts. Open source.</p>
+                <div class="feature">
+                    <h4>No new app</h4>
+                    <p>Just use what you have.</p>
                 </div>
             </div>
         </div>
@@ -462,22 +460,11 @@
 
     <footer>
         <div class="container">
-            <p><strong>.HMAN</strong> — Your personal API. All via Signal.</p>
+            <p><strong>.HMAN</strong> — Connect AI. Stay in control.</p>
             <p style="margin-top: 8px;">Free. Open source. <a
                     href="https://github.com/Tailor-AUS/Human-Managed-Access-Network">GitHub</a></p>
         </div>
     </footer>
-
-    <script>
-        function generateCode() {
-            const phone = document.getElementById('phone').value;
-            if (phone) {
-                alert('SMS sent to ' + phone + '!\n\nReply YES to create your .HMAN code.\n\n(Demo only - full signup coming soon)');
-            } else {
-                alert('Please enter your mobile number');
-            }
-        }
-    </script>
 </body>
 
 </html>
