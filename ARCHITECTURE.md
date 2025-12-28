@@ -1,28 +1,117 @@
 # .HMAN Architecture
 
-> **Your personal API. All via Signal.**
+> **Connect AI to your life. You stay in control.**
 
 ---
 
-## Core Concept
-
-.HMAN is a **conversational interface** to your life. Everything happens via Signal:
+## System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                                                                     │
-│                         THE FLOW                                    │
-│                                                                     │
-│   1. User signs up with mobile number                               │
-│   2. SMS verification                                               │
-│   3. Signal verification (E2E encrypted)                            │
-│   4. User gets unique HMAN code: HMAN-XXXX-XXXX                     │
-│   5. Any AI/person/business sends requests to that code             │
-│   6. .HMAN relays to user via Signal                                │
-│   7. User replies Y/N                                               │
-│   8. .HMAN executes or denies                                       │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                                                                          │
+│   USER (Signal App)                                                      │
+│   ├── Send "code" → get X7K3PQ                                          │
+│   ├── Receive requests from AI                                           │
+│   └── Reply Y/N or A/B/C                                                 │
+│                                                                          │
+└────────────────────────────────────┬─────────────────────────────────────┘
+                                     │
+                                     ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                                                                          │
+│   SIGNAL CLIENT (packages/core/src/signal/)                              │
+│   ├── Session code generation (6 chars, 5 min expiry)                    │
+│   ├── Commands: start, code, status, revoke, help                        │
+│   ├── Message send/receive via signal-cli                                │
+│   └── Pending request management with timeout                            │
+│                                                                          │
+└────────────────────────────────────┬─────────────────────────────────────┘
+                                     │
+                                     ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                                                                          │
+│   BRIDGE (packages/core/src/bridge.ts)                                   │
+│   ├── Session linking (code → session)                                   │
+│   ├── Data request approval                                              │
+│   ├── Payment request approval (card/BSB/PayID)                          │
+│   └── Action request approval                                            │
+│                                                                          │
+└────────────────────────────────────┬─────────────────────────────────────┘
+                                     │
+                                     ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                                                                          │
+│   MCP SERVER (packages/mcp-server/)                                      │
+│   ├── Claude Desktop integration                                         │
+│   ├── Tools: approve_payment, schedule_event, search_vaults, etc.        │
+│   ├── Resources: hman://calendar, hman://contacts, etc.                  │
+│   └── Permission levels (Standard, Gated, Locked)                        │
+│                                                                          │
+└────────────────────────────────────┬─────────────────────────────────────┘
+                                     │
+                                     ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                                                                          │
+│   AI (Claude, GPT, Gemini, etc.)                                         │
+│   ├── Links with session code                                            │
+│   ├── Requests data/actions via MCP                                      │
+│   └── Receives approved data or denial                                   │
+│                                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## The Flow
+
+### 1. User Generates Session Code
+
+```
+User on Signal          Signal Client
+      │                      │
+      │ "code"               │
+      │─────────────────────►│
+      │                      │ Generate: X7K3PQ
+      │                      │ Store: {code, phone, expiry}
+      │ "X7K3PQ (5 min)"     │
+      │◄─────────────────────│
+```
+
+### 2. AI Links with Code
+
+```
+AI                       Bridge                    Signal Client
+│                          │                            │
+│ link("X7K3PQ", "Claude") │                            │
+│─────────────────────────►│ linkSession(code)          │
+│                          │───────────────────────────►│
+│                          │                            │ Validate code
+│                          │                            │ Create session
+│                          │ Session { id, phone, ... } │
+│                          │◄───────────────────────────│
+│ Session                  │                            │
+│◄─────────────────────────│                            │
+│                          │                            │
+│                          │ Notify user via Signal     │
+│                          │───────────────────────────►│ "Claude connected"
+```
+
+### 3. AI Requests Data
+
+```
+AI                       Bridge                    Signal Client        User
+│                          │                            │               │
+│ requestDataApproval()    │                            │               │
+│─────────────────────────►│ requestApproval()          │               │
+│                          │───────────────────────────►│    msg        │
+│                          │                            │──────────────►│
+│                          │                            │               │
+│                          │                            │    "Y"        │
+│                          │                            │◄──────────────│
+│                          │ response                   │               │
+│                          │◄───────────────────────────│               │
+│ {approved: true}         │                            │               │
+│◄─────────────────────────│                            │               │
 ```
 
 ---
@@ -30,208 +119,156 @@
 ## Project Structure
 
 ```
-.HMAN/
-├── docs/
-│   ├── README.md        # What is .HMAN
-│   ├── VISION.md        # Why we built it
-│   └── PROTOCOL.md      # How it works
+.hman/
+├── apps/
+│   └── web-dashboard/
+│       └── public/
+│           └── index.html        # Landing page
 │
-├── web/                 # Landing page (signup)
-│   └── index.html       # Mobile input → Continue on Signal
-│
-├── server/              # .HMAN backend
-│   ├── api/             # REST API for HMAN codes
-│   │   ├── signup.ts    # Mobile → SMS → Signal verification
-│   │   ├── request.ts   # Receive requests from AIs/businesses
-│   │   └── respond.ts   # Process user responses
+├── packages/
+│   ├── core/
+│   │   └── src/
+│   │       ├── signal/           # Signal client
+│   │       │   ├── client.ts     # Session codes, messaging
+│   │       │   └── index.ts
+│   │       ├── bridge.ts         # AI ↔ Signal bridge
+│   │       ├── vault/            # Encrypted data storage
+│   │       ├── crypto/           # Encryption
+│   │       ├── access/           # Permission management
+│   │       ├── audit/            # Audit logging
+│   │       └── index.ts
 │   │
-│   ├── signal/          # Signal integration
-│   │   ├── client.ts    # signal-cli wrapper
-│   │   ├── send.ts      # Send messages to users
-│   │   └── receive.ts   # Receive user responses
+│   ├── mcp-server/
+│   │   └── src/
+│   │       ├── server.ts         # MCP implementation
+│   │       ├── cli.ts            # CLI entry point
+│   │       └── index.ts
 │   │
-│   └── db/              # Database
-│       ├── users.ts     # HMAN codes ↔ phone numbers
-│       ├── requests.ts  # Pending requests
-│       └── audit.ts     # What was shared/executed
+│   └── shared/
+│       └── src/
+│           └── types/            # Shared types
 │
-└── sdk/                 # For AI integrations
-    └── hman-client.ts   # Send requests to HMAN codes
+├── README.md
+├── VISION.md
+├── PROTOCOL.md
+└── ARCHITECTURE.md               # This file
 ```
 
 ---
 
-## API Endpoints
+## Key Components
 
-### 1. Signup
-```
-POST /api/signup
-{
-  "phone": "+61412345678"
-}
+### Signal Client
 
-Response:
-{
-  "status": "sms_sent",
-  "message": "Reply YES to create your .HMAN"
-}
-```
+```typescript
+import { createSignalClient } from '@hman/core';
 
-### 2. Verify SMS
-```
-POST /api/verify-sms
-{
-  "phone": "+61412345678",
-  "code": "YES"
-}
+const client = createSignalClient({
+  phoneNumber: '+61400000000',
+});
 
-Response:
-{
-  "status": "signal_pending",
-  "message": "Check Signal for verification"
-}
+await client.start();
+
+// Handle incoming message
+const response = await client.handleIncomingMessage(
+  '+61412345678',
+  'code'
+);
+// → "Your session code: X7K3PQ (valid 5 minutes)"
 ```
 
-### 3. Complete Signup (after Signal confirmation)
-```
-Response (via Signal):
-{
-  "status": "active",
-  "hman_code": "HMAN-7K3F-X9P2"
-}
-```
+### Bridge
 
-### 4. Send Request (from AI/business)
-```
-POST /api/request
-{
-  "hman_code": "HMAN-7K3F-X9P2",
-  "from": "Claude (Anthropic)",
-  "type": "calendar_access",
-  "message": "Wants your calendar for project planning",
-  "options": [
-    { "key": "Y", "label": "Approve" },
-    { "key": "N", "label": "Deny" }
-  ]
-}
+```typescript
+import { createBridge } from '@hman/core';
 
-Response:
-{
-  "request_id": "req_abc123",
-  "status": "pending"
+const bridge = createBridge({
+  phoneNumber: '+61400000000',
+});
+
+await bridge.start();
+
+// Link AI session
+const session = await bridge.link('X7K3PQ', 'Claude');
+
+// Request data approval
+const result = await bridge.requestDataApproval({
+  resource: 'calendar',
+  purpose: 'Project planning',
+});
+
+if (result.approved) {
+  // User approved, return calendar data
 }
 ```
 
-### 5. Get Response
-```
-GET /api/request/req_abc123
+### MCP Server
 
-Response:
-{
-  "status": "approved",
-  "response": "Y",
-  "timestamp": "2024-01-15T10:30:00Z"
-}
+```typescript
+import { createHmanGate } from '@hman/mcp-server';
+
+const gate = createHmanGate({
+  onAccessRequest: async (request) => {
+    // This is where Bridge integrates
+    const result = await bridge.requestDataApproval({
+      resource: request.resource,
+      purpose: request.purpose,
+    });
+    
+    return {
+      granted: result.approved,
+      denialReason: result.reason,
+    };
+  },
+});
+
+await gate.run(); // Run as MCP server
 ```
 
 ---
 
-## Signal Messages
+## Session Codes
 
-### Request Format
-```
-─────────────────────────────────
-Request from Claude
-
-Claude wants your calendar for
-project planning.
-
-Reply Y to approve
-Reply N to deny
-─────────────────────────────────
-```
-
-### Response Format
-```
-User: Y
-
-.HMAN: ✓ Approved. Shared calendar
-       with Claude.
-```
-
-### Payment Request
-```
-─────────────────────────────────
-Request from Origin Energy
-
-Payment request: $145.00
-
-A) Share credit card
-B) Use BSB/Account
-C) Pay via PayID
-
-Reply A, B, or C
-─────────────────────────────────
-```
+| Property | Value |
+|----------|-------|
+| Length | 6 characters |
+| Characters | A-Z, 2-9 (no I, O, 0, 1) |
+| Expiry | 5 minutes |
+| Usage | Single-use |
 
 ---
 
-## Tech Stack
+## Signal Commands
+
+| Command | Description |
+|---------|-------------|
+| `start` | Initialize / welcome message |
+| `code` | Generate new session code |
+| `status` | List active sessions |
+| `revoke` | End all sessions |
+| `help` | Show available commands |
+
+---
+
+## Technologies
 
 | Layer | Technology |
 |-------|------------|
-| **Web** | Static HTML (Vercel/Netlify) |
-| **API** | Node.js / Bun |
-| **Signal** | signal-cli (unofficial) |
-| **Database** | SQLite / Turso |
-| **Queue** | Redis (for async signal messages) |
+| Landing Page | Static HTML |
+| Signal Integration | signal-cli (unofficial) |
+| MCP Server | @modelcontextprotocol/sdk |
+| Encryption | libsodium |
+| Storage | SQLite (vaults) |
 
 ---
 
-## Files to Keep
+## Next Steps
 
-| File | Purpose |
-|------|---------|
-| `README.md` | Overview |
-| `VISION.md` | Mission |
-| `PROTOCOL.md` | How it works |
-| `ARCHITECTURE.md` | This file |
-| `apps/web-dashboard/public/index.html` | Landing page |
+1. **Signal-cli integration** - Wire up actual Signal messaging
+2. **Session persistence** - Store sessions in database
+3. **MCP-Bridge integration** - Connect MCP server to Bridge
+4. **Web fallback** - For users without Signal
 
 ---
 
-## Files to Remove (old complexity)
-
-- `packages/core/` → Too complex, rebuild simpler
-- `packages/mcp-server/` → Not needed initially
-- `packages/sync-relay/` → Not needed initially
-- `apps/mobile/` → Future, not now
-- `apps/demo-cli/` → Not needed
-- `MOBILE.md` → Future
-- `VPN.md` → Future
-- `ROADMAP.md` → Outdated
-
----
-
-## MVP Focus
-
-### Phase 1: Core Flow
-1. ✅ Landing page with signup
-2. 🔨 SMS verification (Twilio)
-3. 🔨 Signal integration (signal-cli)
-4. 🔨 HMAN code generation
-5. 🔨 Request relay to user
-6. 🔨 Response handling
-
-### Phase 2: AI Integration
-- SDK for Claude/GPT to send requests
-- MCP server for Claude Desktop
-
-### Phase 3: Actions
-- Payment execution
-- Calendar management
-- Email access
-
----
-
-*Keep it simple. Signal is the interface. That's it.*
+*Your personal API. All via Signal.*
