@@ -1,50 +1,54 @@
 /**
  * HMAN Signal Client
  * 
- * Handles communication with users via Signal messenger.
- * Uses signal-cli under the hood for sending/receiving messages.
- * 
- * Flow:
- * 1. User generates session code via Signal ("code")
- * 2. AI connects with that code via MCP
- * 3. AI requests data/action
- * 4. We send request to user via Signal
- * 5. User replies Y/N or A/B/C
- * 6. We return decision to MCP
+ * Implements the 3-level trust model:
+ * - Level 1: Manual (default) - user pastes data
+ * - Level 2: Connected - OAuth services, still approve each request
+ * - Level 3: Pre-Approved - rules for auto-approval
  */
 
-import { spawn, ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
 
+// =============================================================================
+// TYPES
+// =============================================================================
+
 export interface SignalConfig {
-    /** Phone number for the Signal account (with country code) */
     phoneNumber: string;
-    /** Path to signal-cli executable */
     signalCliPath?: string;
-    /** Config directory for signal-cli */
-    configPath?: string;
 }
 
-export interface SignalMessage {
-    from: string;
-    to: string;
-    message: string;
-    timestamp: Date;
-}
-
-export interface PendingRequest {
-    id: string;
-    userPhone: string;
-    message: string;
-    options: string[];
+export interface User {
+    phone: string;
+    trustLevel: TrustLevel;
+    connections: Connection[];
+    rules: ApprovalRule[];
     createdAt: Date;
-    expiresAt: Date;
-    resolve: (response: string | null) => void;
 }
 
-/**
- * Session code for linking AI to user
- */
+export enum TrustLevel {
+    Manual = 1,      // Default - paste data manually
+    Connected = 2,   // OAuth connected, still approve each
+    PreApproved = 3, // Rules for auto-approval
+}
+
+export interface Connection {
+    id: string;
+    service: string;        // 'google', 'microsoft', etc.
+    scopes: string[];       // 'calendar.read', 'contacts.read', etc.
+    connectedAt: Date;
+    expiresAt?: Date;
+}
+
+export interface ApprovalRule {
+    id: string;
+    ai: string;             // 'Claude', 'GPT', '*' for any
+    dataType: string;       // 'calendar', 'contacts', '*' for any
+    action: 'read' | 'write' | 'both';
+    createdAt: Date;
+    expiresAt?: Date;
+}
+
 export interface SessionCode {
     code: string;
     userPhone: string;
@@ -53,9 +57,6 @@ export interface SessionCode {
     used: boolean;
 }
 
-/**
- * Active session between AI and user
- */
 export interface Session {
     id: string;
     userPhone: string;
@@ -64,11 +65,41 @@ export interface Session {
     lastActivity: Date;
 }
 
-/**
- * Generate a random session code
- */
+export interface PendingRequest {
+    id: string;
+    sessionId: string;
+    userPhone: string;
+    aiName: string;
+    dataType: string;
+    purpose?: string;
+    options: string[];
+    createdAt: Date;
+    expiresAt: Date;
+    resolve: (response: RequestResponse) => void;
+}
+
+export interface RequestResponse {
+    approved: boolean;
+    response: string | null;
+    data?: unknown;
+    autoApproved?: boolean;
+}
+
+export interface AuditEntry {
+    id: string;
+    timestamp: Date;
+    ai: string;
+    dataType: string;
+    action: 'approved' | 'denied' | 'auto_approved';
+    rule?: string;
+}
+
+// =============================================================================
+// HELPERS
+// =============================================================================
+
 function generateCode(length: number = 6): string {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No I, O, 0, 1 for clarity
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let code = '';
     for (let i = 0; i < length; i++) {
         code += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -76,149 +107,155 @@ function generateCode(length: number = 6): string {
     return code;
 }
 
-/**
- * Generate a unique ID
- */
 function generateId(): string {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
-/**
- * HMAN Signal Client
- */
+// =============================================================================
+// SIGNAL CLIENT
+// =============================================================================
+
 export class SignalClient extends EventEmitter {
     private config: SignalConfig;
-    private pendingRequests: Map<string, PendingRequest> = new Map();
+
+    // User data
+    private users: Map<string, User> = new Map();
+
+    // Session management
     private sessionCodes: Map<string, SessionCode> = new Map();
     private sessions: Map<string, Session> = new Map();
-    private userSessions: Map<string, string> = new Map(); // phone -> session id
-    private daemon: ChildProcess | null = null;
+
+    // Request handling
+    private pendingRequests: Map<string, PendingRequest> = new Map();
+
+    // Audit log
+    private auditLog: AuditEntry[] = [];
+
     private isRunning: boolean = false;
 
     constructor(config: SignalConfig) {
         super();
-        this.config = {
-            signalCliPath: 'signal-cli',
-            ...config,
-        };
+        this.config = config;
     }
 
-    /**
-     * Start listening for incoming messages
-     */
+    // ---------------------------------------------------------------------------
+    // LIFECYCLE
+    // ---------------------------------------------------------------------------
+
     async start(): Promise<void> {
         if (this.isRunning) return;
-
-        console.log('[Signal] Starting Signal client...');
-
-        // In production, this would start signal-cli in daemon mode
-        // For now, we'll simulate it
+        console.log('[Signal] Starting client...');
         this.isRunning = true;
-
-        // Cleanup expired codes every 10 seconds
         setInterval(() => this.cleanupExpired(), 10000);
-
         console.log('[Signal] Client started');
         this.emit('ready');
     }
 
-    /**
-     * Stop the client
-     */
     async stop(): Promise<void> {
         this.isRunning = false;
-        if (this.daemon) {
-            this.daemon.kill();
-            this.daemon = null;
-        }
         console.log('[Signal] Client stopped');
     }
 
-    /**
-     * Handle an incoming message from a user
-     */
+    // ---------------------------------------------------------------------------
+    // MESSAGE HANDLING
+    // ---------------------------------------------------------------------------
+
     async handleIncomingMessage(from: string, message: string): Promise<string> {
         const text = message.trim().toLowerCase();
+        const parts = text.split(/\s+/);
+        const command = parts[0];
 
-        console.log(`[Signal] Message from ${from}: ${message}`);
+        console.log(`[Signal] From ${from}: ${message}`);
 
-        // Command: start - register user
-        if (text === 'start') {
-            return this.handleStart(from);
+        // Ensure user exists
+        if (!this.users.has(from) && command !== 'start') {
+            return 'Send "start" to begin.';
         }
 
-        // Command: code - generate session code
-        if (text === 'code') {
-            return this.handleGenerateCode(from);
-        }
+        // ===================
+        // LEVEL 1 COMMANDS
+        // ===================
 
-        // Command: status - show active sessions
-        if (text === 'status') {
-            return this.handleStatus(from);
-        }
+        if (command === 'start') return this.handleStart(from);
+        if (command === 'code') return this.handleCode(from);
+        if (command === 'status') return this.handleStatus(from);
+        if (command === 'revoke') return this.handleRevoke(from);
+        if (command === 'help') return this.handleHelp(from);
+        if (command === 'level') return this.handleLevel(from);
 
-        // Command: revoke - end all sessions
-        if (text === 'revoke') {
-            return this.handleRevoke(from);
-        }
+        // ===================
+        // LEVEL 2 COMMANDS
+        // ===================
 
-        // Command: help - show commands
-        if (text === 'help') {
-            return this.handleHelp();
-        }
+        if (command === 'connect') return this.handleConnect(from, parts[1]);
+        if (command === 'disconnect') return this.handleDisconnect(from, parts[1]);
+        if (command === 'connections') return this.handleConnections(from);
 
-        // Check if this is a response to a pending request
+        // ===================
+        // LEVEL 3 COMMANDS
+        // ===================
+
+        if (command === 'rules') return this.handleRules(from);
+        if (command === 'allow') return this.handleAllow(from, parts.slice(1));
+        if (command === 'deny') return this.handleDeny(from, parts[1]);
+        if (command === 'audit') return this.handleAudit(from);
+
+        // ===================
+        // RESPONSE TO REQUEST
+        // ===================
+
         const response = await this.handlePendingResponse(from, message);
-        if (response) {
-            return response;
-        }
+        if (response) return response;
 
-        // Unknown command
         return 'Unknown command. Send "help" for available commands.';
     }
 
-    /**
-     * Handle 'start' command - register user
-     */
+    // ---------------------------------------------------------------------------
+    // LEVEL 1: MANUAL (Default)
+    // ---------------------------------------------------------------------------
+
     private handleStart(phone: string): string {
-        console.log(`[Signal] User ${phone} registered`);
+        if (!this.users.has(phone)) {
+            this.users.set(phone, {
+                phone,
+                trustLevel: TrustLevel.Manual,
+                connections: [],
+                rules: [],
+                createdAt: new Date(),
+            });
+        }
+
         return `Welcome to .HMAN!
 
-Your personal API is ready.
+You're at Level 1 (Manual):
+• Every request needs your approval
+• You provide data when asked
+• Maximum control
 
 Commands:
-• code - Generate a session code
-• status - View active connections
+• code - Generate session code
+• status - View sessions
 • revoke - End all sessions
-• help - Show this message
-
-When you want to connect an AI:
-1. Send "code"
-2. Give the code to the AI
-3. Approve requests when they come`;
+• level - See your trust level
+• help - All commands`;
     }
 
-    /**
-     * Handle 'code' command - generate session code
-     */
-    private handleGenerateCode(phone: string): string {
-        // Clean up any existing unused codes for this user
+    private handleCode(phone: string): string {
+        // Clean up old codes for this user
         for (const [code, session] of this.sessionCodes) {
             if (session.userPhone === phone && !session.used) {
                 this.sessionCodes.delete(code);
             }
         }
 
-        // Generate new code
         const code = generateCode(6);
         const now = new Date();
-        const expiresAt = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes
 
         this.sessionCodes.set(code, {
             code,
             userPhone: phone,
             createdAt: now,
-            expiresAt,
+            expiresAt: new Date(now.getTime() + 5 * 60 * 1000), // 5 minutes
             used: false,
         });
 
@@ -232,10 +269,8 @@ Valid for 5 minutes.
 Give this to any AI to connect.`;
     }
 
-    /**
-     * Handle 'status' command - show active sessions
-     */
     private handleStatus(phone: string): string {
+        const user = this.users.get(phone);
         const activeSessions: Session[] = [];
 
         for (const session of this.sessions.values()) {
@@ -244,24 +279,25 @@ Give this to any AI to connect.`;
             }
         }
 
+        const levelName = ['', 'Manual', 'Connected', 'Pre-Approved'][user?.trustLevel || 1];
+
+        let msg = `Trust Level: ${user?.trustLevel || 1} (${levelName})\n\n`;
+
         if (activeSessions.length === 0) {
-            return 'No active sessions.\n\nSend "code" to generate a session code.';
+            msg += 'No active sessions.';
+        } else {
+            msg += 'Active sessions:\n';
+            for (const s of activeSessions) {
+                const mins = Math.floor((Date.now() - s.createdAt.getTime()) / 60000);
+                msg += `• ${s.serviceName} (${mins}m)\n`;
+            }
         }
 
-        const lines = activeSessions.map(s => {
-            const age = Math.floor((Date.now() - s.createdAt.getTime()) / 1000 / 60);
-            return `• ${s.serviceName} (${age}m ago)`;
-        });
-
-        return `Active sessions:\n\n${lines.join('\n')}\n\nSend "revoke" to end all sessions.`;
+        return msg;
     }
 
-    /**
-     * Handle 'revoke' command - end all sessions
-     */
     private handleRevoke(phone: string): string {
         let count = 0;
-
         for (const [id, session] of this.sessions) {
             if (session.userPhone === phone) {
                 this.sessions.delete(id);
@@ -269,87 +305,331 @@ Give this to any AI to connect.`;
             }
         }
 
-        this.userSessions.delete(phone);
-
-        if (count === 0) {
-            return 'No active sessions to revoke.';
+        // Cancel pending requests
+        for (const [id, request] of this.pendingRequests) {
+            if (request.userPhone === phone) {
+                request.resolve({ approved: false, response: null });
+                this.pendingRequests.delete(id);
+            }
         }
 
-        console.log(`[Signal] Revoked ${count} sessions for ${phone}`);
-        return `✓ Revoked ${count} session${count > 1 ? 's' : ''}.`;
+        return count > 0
+            ? `✓ Revoked ${count} session${count > 1 ? 's' : ''}. All AIs disconnected.`
+            : 'No active sessions to revoke.';
     }
 
-    /**
-     * Handle 'help' command
-     */
-    private handleHelp(): string {
-        return `.HMAN Commands:
+    private handleLevel(phone: string): string {
+        const user = this.users.get(phone);
+        if (!user) return 'Send "start" first.';
 
-• start - Get started
+        const levels = {
+            1: {
+                name: 'Manual',
+                desc: 'You approve and provide data manually each time.',
+                next: 'Send "connect <service>" to upgrade to Level 2.',
+            },
+            2: {
+                name: 'Connected',
+                desc: 'Services linked via OAuth. Still approve each request.',
+                next: 'Send "allow <ai> <data>" to create auto-approve rules.',
+            },
+            3: {
+                name: 'Pre-Approved',
+                desc: 'Rules auto-approve some requests. Notified after.',
+                next: 'You\'re at the highest level.',
+            },
+        };
+
+        const level = levels[user.trustLevel as 1 | 2 | 3];
+
+        return `Level ${user.trustLevel}: ${level.name}
+
+${level.desc}
+
+${level.next}`;
+    }
+
+    private handleHelp(phone: string): string {
+        const user = this.users.get(phone);
+        const level = user?.trustLevel || 1;
+
+        let msg = `Commands:
+
+Level 1 (Manual):
 • code - Generate session code
-• status - View active connections
+• status - View sessions & level
 • revoke - End all sessions
-• help - Show this message
+• level - Your trust level
+• help - This message`;
 
-When an AI requests access, you'll receive a message. Reply with your choice (Y/N or A/B/C).`;
+        if (level >= 2) {
+            msg += `
+
+Level 2 (Connected):
+• connect <service> - Link a service
+• disconnect <service> - Unlink
+• connections - List connected`;
+        }
+
+        if (level >= 3) {
+            msg += `
+
+Level 3 (Pre-Approved):
+• rules - View auto-approve rules
+• allow <ai> <data> - Add rule
+• deny <ai> - Remove AI rules
+• audit - View auto-approvals`;
+        }
+
+        return msg;
     }
 
-    /**
-     * Check if message is a response to a pending request
-     */
+    // ---------------------------------------------------------------------------
+    // LEVEL 2: CONNECTED
+    // ---------------------------------------------------------------------------
+
+    private handleConnect(phone: string, service?: string): string {
+        const user = this.users.get(phone);
+        if (!user) return 'Send "start" first.';
+
+        if (!service) {
+            return `Available services:
+• google - Calendar, Contacts, Drive
+• microsoft - Outlook, OneDrive
+• github - Repos, Issues
+
+Send "connect <service>" to link.`;
+        }
+
+        // Simulate OAuth flow (in production, would return OAuth URL)
+        const connection: Connection = {
+            id: generateId(),
+            service: service.toLowerCase(),
+            scopes: ['read'], // Default to read-only
+            connectedAt: new Date(),
+        };
+
+        user.connections.push(connection);
+
+        // Upgrade to Level 2 if first connection
+        if (user.trustLevel < TrustLevel.Connected) {
+            user.trustLevel = TrustLevel.Connected;
+        }
+
+        return `✓ Connected to ${service}.
+
+You're now Level 2 (Connected).
+• AIs can request your ${service} data
+• You still approve each request
+• We fetch automatically when you say Y
+
+Send "connections" to see all linked services.`;
+    }
+
+    private handleDisconnect(phone: string, service?: string): string {
+        const user = this.users.get(phone);
+        if (!user) return 'Send "start" first.';
+
+        if (!service) {
+            return 'Usage: disconnect <service>';
+        }
+
+        const idx = user.connections.findIndex(c => c.service === service.toLowerCase());
+        if (idx === -1) {
+            return `Not connected to ${service}.`;
+        }
+
+        user.connections.splice(idx, 1);
+
+        // Downgrade if no more connections
+        if (user.connections.length === 0 && user.trustLevel === TrustLevel.Connected) {
+            user.trustLevel = TrustLevel.Manual;
+            return `✓ Disconnected from ${service}. Back to Level 1 (Manual).`;
+        }
+
+        return `✓ Disconnected from ${service}.`;
+    }
+
+    private handleConnections(phone: string): string {
+        const user = this.users.get(phone);
+        if (!user) return 'Send "start" first.';
+
+        if (user.connections.length === 0) {
+            return 'No connected services.\n\nSend "connect" to see available services.';
+        }
+
+        let msg = 'Connected services:\n';
+        for (const conn of user.connections) {
+            msg += `• ${conn.service} (${conn.scopes.join(', ')})\n`;
+        }
+
+        return msg;
+    }
+
+    // ---------------------------------------------------------------------------
+    // LEVEL 3: PRE-APPROVED
+    // ---------------------------------------------------------------------------
+
+    private handleRules(phone: string): string {
+        const user = this.users.get(phone);
+        if (!user) return 'Send "start" first.';
+
+        if (user.rules.length === 0) {
+            return `No auto-approve rules.
+
+Create a rule:
+allow <ai> <data>
+
+Examples:
+• allow Claude calendar
+• allow GPT contacts
+• allow * calendar (any AI)`;
+        }
+
+        let msg = 'Auto-approve rules:\n';
+        for (const rule of user.rules) {
+            msg += `• ${rule.ai} can ${rule.action} ${rule.dataType}\n`;
+        }
+
+        return msg;
+    }
+
+    private handleAllow(phone: string, args: string[]): string {
+        const user = this.users.get(phone);
+        if (!user) return 'Send "start" first.';
+
+        if (args.length < 2) {
+            return 'Usage: allow <ai> <data>\n\nExamples:\n• allow Claude calendar\n• allow GPT contacts';
+        }
+
+        const [ai, dataType] = args;
+
+        // Check if they have the connection for this data type
+        if (user.trustLevel < TrustLevel.Connected) {
+            return 'Connect a service first (Level 2) before creating rules.';
+        }
+
+        const rule: ApprovalRule = {
+            id: generateId(),
+            ai: ai,
+            dataType: dataType,
+            action: 'read',
+            createdAt: new Date(),
+        };
+
+        user.rules.push(rule);
+
+        // Upgrade to Level 3
+        if (user.trustLevel < TrustLevel.PreApproved) {
+            user.trustLevel = TrustLevel.PreApproved;
+        }
+
+        return `✓ Rule added: ${ai} can read ${dataType}
+
+You're now Level 3 (Pre-Approved).
+Matching requests will auto-approve.
+You'll be notified after.
+
+Send "rules" to see all rules.`;
+    }
+
+    private handleDeny(phone: string, ai?: string): string {
+        const user = this.users.get(phone);
+        if (!user) return 'Send "start" first.';
+
+        if (!ai) {
+            return 'Usage: deny <ai>\n\nRemoves all rules for that AI.';
+        }
+
+        const before = user.rules.length;
+        user.rules = user.rules.filter(r => r.ai.toLowerCase() !== ai.toLowerCase());
+        const removed = before - user.rules.length;
+
+        if (removed === 0) {
+            return `No rules found for ${ai}.`;
+        }
+
+        // Downgrade if no more rules
+        if (user.rules.length === 0 && user.trustLevel === TrustLevel.PreApproved) {
+            user.trustLevel = TrustLevel.Connected;
+            return `✓ Removed ${removed} rule${removed > 1 ? 's' : ''} for ${ai}. Back to Level 2.`;
+        }
+
+        return `✓ Removed ${removed} rule${removed > 1 ? 's' : ''} for ${ai}.`;
+    }
+
+    private handleAudit(phone: string): string {
+        const userAudit = this.auditLog.filter(e =>
+            this.sessions.get(e.id)?.userPhone === phone ||
+            [...this.sessions.values()].some(s => s.userPhone === phone)
+        ).slice(-10);
+
+        if (userAudit.length === 0) {
+            return 'No audit entries yet.';
+        }
+
+        let msg = 'Recent activity:\n';
+        for (const entry of userAudit) {
+            const time = entry.timestamp.toLocaleTimeString();
+            const status = entry.action === 'auto_approved' ? '⚡' : entry.action === 'approved' ? '✓' : '✗';
+            msg += `${status} ${time} - ${entry.ai} ${entry.dataType}\n`;
+        }
+
+        return msg;
+    }
+
+    // ---------------------------------------------------------------------------
+    // REQUEST HANDLING
+    // ---------------------------------------------------------------------------
+
     private async handlePendingResponse(phone: string, message: string): Promise<string | null> {
-        // Find pending request for this user
         for (const [id, request] of this.pendingRequests) {
             if (request.userPhone === phone) {
                 const response = message.trim().toUpperCase();
 
-                // Validate response
                 if (request.options.includes(response)) {
-                    request.resolve(response);
+                    const approved = response === 'Y' || response === 'A';
+
+                    request.resolve({
+                        approved,
+                        response,
+                        autoApproved: false,
+                    });
                     this.pendingRequests.delete(id);
 
-                    if (response === 'Y' || response === 'A') {
-                        return '✓ Approved.';
-                    } else if (response === 'N') {
-                        return '✗ Denied.';
-                    } else {
-                        return `✓ Selected: ${response}`;
-                    }
+                    // Log to audit
+                    this.auditLog.push({
+                        id: generateId(),
+                        timestamp: new Date(),
+                        ai: request.aiName,
+                        dataType: request.dataType,
+                        action: approved ? 'approved' : 'denied',
+                    });
+
+                    return approved
+                        ? '✓ Approved.'
+                        : '✗ Denied. They received nothing.';
                 } else {
-                    return `Invalid response. Reply with: ${request.options.join(', ')}`;
+                    return `Invalid response. Reply: ${request.options.join(', ')}`;
                 }
             }
         }
-
         return null;
     }
 
-    /**
-     * Link a session code to an AI service
-     */
+    // ---------------------------------------------------------------------------
+    // SESSION MANAGEMENT (for Bridge)
+    // ---------------------------------------------------------------------------
+
     async linkSession(code: string, serviceName: string): Promise<Session | null> {
         const sessionCode = this.sessionCodes.get(code.toUpperCase());
 
-        if (!sessionCode) {
-            console.log(`[Signal] Invalid code: ${code}`);
+        if (!sessionCode || sessionCode.used || new Date() > sessionCode.expiresAt) {
             return null;
         }
 
-        if (sessionCode.used) {
-            console.log(`[Signal] Code already used: ${code}`);
-            return null;
-        }
-
-        if (new Date() > sessionCode.expiresAt) {
-            console.log(`[Signal] Code expired: ${code}`);
-            this.sessionCodes.delete(code);
-            return null;
-        }
-
-        // Mark code as used
         sessionCode.used = true;
 
-        // Create session
         const session: Session = {
             id: generateId(),
             userPhone: sessionCode.userPhone,
@@ -359,120 +639,126 @@ When an AI requests access, you'll receive a message. Reply with your choice (Y/
         };
 
         this.sessions.set(session.id, session);
-        this.userSessions.set(session.userPhone, session.id);
 
-        // Notify user
         await this.sendMessage(
             session.userPhone,
-            `✓ ${serviceName} connected.\n\nThey can now request access to your data. You'll approve each request.`
+            `✓ ${serviceName} connected.\n\nThey can now request access. You approve each one.`
         );
 
-        console.log(`[Signal] Session created: ${session.id} for ${serviceName}`);
         return session;
     }
 
-    /**
-     * Get session by ID
-     */
     getSession(sessionId: string): Session | null {
         return this.sessions.get(sessionId) || null;
     }
 
+    getUser(phone: string): User | null {
+        return this.users.get(phone) || null;
+    }
+
     /**
-     * Request approval from user
+     * Request approval - respects trust levels
      */
     async requestApproval(
         sessionId: string,
-        message: string,
+        dataType: string,
+        purpose?: string,
         options: string[] = ['Y', 'N'],
         timeoutMs: number = 60000
-    ): Promise<string | null> {
+    ): Promise<RequestResponse> {
         const session = this.sessions.get(sessionId);
         if (!session) {
-            console.log(`[Signal] Session not found: ${sessionId}`);
-            return null;
+            return { approved: false, response: null };
         }
 
-        // Update session activity
+        const user = this.users.get(session.userPhone);
+        if (!user) {
+            return { approved: false, response: null };
+        }
+
         session.lastActivity = new Date();
 
-        // Create pending request
-        const requestId = generateId();
-        const now = new Date();
+        // ===================
+        // LEVEL 3: Check auto-approve rules
+        // ===================
+        if (user.trustLevel >= TrustLevel.PreApproved) {
+            const matchingRule = user.rules.find(r =>
+                (r.ai === '*' || r.ai.toLowerCase() === session.serviceName.toLowerCase()) &&
+                (r.dataType === '*' || r.dataType.toLowerCase() === dataType.toLowerCase())
+            );
 
-        // Format message with options
-        let fullMessage = `Request from ${session.serviceName}:\n\n${message}\n\n`;
-        if (options.length === 2 && options[0] === 'Y' && options[1] === 'N') {
-            fullMessage += 'Reply Y to approve\nReply N to deny';
-        } else {
-            fullMessage += options.map(o => `${o})`).join('\n');
+            if (matchingRule) {
+                // Auto-approve and notify
+                await this.sendMessage(
+                    session.userPhone,
+                    `⚡ Auto-approved: ${session.serviceName} → ${dataType}\n(Rule: ${matchingRule.ai} can ${matchingRule.action} ${matchingRule.dataType})`
+                );
+
+                this.auditLog.push({
+                    id: generateId(),
+                    timestamp: new Date(),
+                    ai: session.serviceName,
+                    dataType,
+                    action: 'auto_approved',
+                    rule: matchingRule.id,
+                });
+
+                return { approved: true, response: 'Y', autoApproved: true };
+            }
         }
 
-        // Send to user
-        await this.sendMessage(session.userPhone, fullMessage);
+        // ===================
+        // LEVEL 1 & 2: Ask for approval
+        // ===================
+        let message = `${session.serviceName} wants your ${dataType}`;
+        if (purpose) message += `\n\nPurpose: ${purpose}`;
+        message += `\n\nY to approve\nN to deny`;
 
-        // Wait for response
+        await this.sendMessage(session.userPhone, message);
+
         return new Promise((resolve) => {
             const request: PendingRequest = {
-                id: requestId,
+                id: generateId(),
+                sessionId,
                 userPhone: session.userPhone,
-                message,
+                aiName: session.serviceName,
+                dataType,
+                purpose,
                 options,
-                createdAt: now,
-                expiresAt: new Date(now.getTime() + timeoutMs),
+                createdAt: new Date(),
+                expiresAt: new Date(Date.now() + timeoutMs),
                 resolve,
             };
 
-            this.pendingRequests.set(requestId, request);
+            this.pendingRequests.set(request.id, request);
 
-            // Timeout
             setTimeout(() => {
-                if (this.pendingRequests.has(requestId)) {
-                    this.pendingRequests.delete(requestId);
+                if (this.pendingRequests.has(request.id)) {
+                    this.pendingRequests.delete(request.id);
                     this.sendMessage(session.userPhone, '⏰ Request timed out.');
-                    resolve(null);
+                    resolve({ approved: false, response: null });
                 }
             }, timeoutMs);
         });
     }
 
-    /**
-     * Send a message to a user
-     */
     async sendMessage(to: string, message: string): Promise<void> {
-        console.log(`[Signal] Sending to ${to}: ${message.substring(0, 50)}...`);
-
-        // In production, this would use signal-cli to send
-        // For now, emit an event that can be picked up by test code
+        console.log(`[Signal] → ${to}: ${message.substring(0, 50)}...`);
         this.emit('outgoing', { to, message, timestamp: new Date() });
     }
 
-    /**
-     * Cleanup expired codes and requests
-     */
     private cleanupExpired(): void {
         const now = new Date();
-
-        // Cleanup expired codes
         for (const [code, session] of this.sessionCodes) {
-            if (now > session.expiresAt) {
-                this.sessionCodes.delete(code);
-            }
-        }
-
-        // Cleanup expired requests (handled by timeout, but double-check)
-        for (const [id, request] of this.pendingRequests) {
-            if (now > request.expiresAt) {
-                request.resolve(null);
-                this.pendingRequests.delete(id);
-            }
+            if (now > session.expiresAt) this.sessionCodes.delete(code);
         }
     }
 }
 
-/**
- * Create a Signal client
- */
+// =============================================================================
+// FACTORY
+// =============================================================================
+
 export function createSignalClient(config: SignalConfig): SignalClient {
     return new SignalClient(config);
 }
