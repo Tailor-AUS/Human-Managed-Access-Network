@@ -201,3 +201,23 @@ export {
   type VerificationResult,
 } from './authenticity/index.js';
 
+// Signal Client module - session-based communication
+export {
+  SignalClient as HmanSignalClient,
+  createSignalClient as createHmanSignalClient,
+  type SignalConfig as HmanSignalClientConfig,
+  type SignalMessage as HmanSignalClientMessage,
+  type SessionCode as HmanSessionCode,
+  type Session as HmanSession,
+  type PendingRequest as HmanPendingRequest,
+} from './signal/index.js';
+
+// Bridge module - connects AI to Signal
+export {
+  HmanBridge,
+  createBridge,
+  type BridgeConfig,
+  type DataRequest,
+  type ApprovalResult,
+} from './bridge.js';
+
