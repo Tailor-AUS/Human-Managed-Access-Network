@@ -16,7 +16,8 @@
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "demo": "node --loader ts-node/esm src/demo.ts"
+    "demo": "node --loader ts-node/esm src/demo.ts",
+    "daemon": "node --loader ts-node/esm src/daemon.ts"
   },
   "dependencies": {
     "@hman/shared": "workspace:*",
