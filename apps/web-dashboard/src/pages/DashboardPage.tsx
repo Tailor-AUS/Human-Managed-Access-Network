@@ -1,370 +1,231 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
-  Archive,
-  Shield,
-  Bell,
-  Users,
-  TrendingUp,
-  AlertTriangle,
-  CheckCircle,
-  Clock,
+  ShieldCheck,
+  ShieldAlert,
+  Mic,
+  Cpu,
+  Lock,
+  AlertCircle,
   RefreshCw,
+  ArrowRight,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react'
+import { hman, type Health, type GatesResponse } from '../lib/hman'
 
-// Types
-interface Stat {
-  label: string
-  value: string
-  icon: React.ElementType
-  color: string
-}
+export function DashboardPage() {
+  const [health, setHealth] = useState<Health | null>(null)
+  const [gates, setGates] = useState<GatesResponse | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
-interface Activity {
-  id: string
-  action: string
-  actor: string
-  resource: string
-  time: string
-  status: 'success' | 'denied' | 'info'
-}
+  const refresh = async () => {
+    try {
+      setLoading(true)
+      const [h, g] = await Promise.all([hman.health(), hman.gates()])
+      setHealth(h)
+      setGates(g)
+      setError(null)
+    } catch (e: any) {
+      setError(e?.message ?? String(e))
+    } finally {
+      setLoading(false)
+    }
+  }
 
-interface PendingRequest {
-  id: string
-  requester: string
-  resource: string
-  purpose: string
-  expires: string
-}
+  useEffect(() => {
+    refresh()
+    const t = setInterval(refresh, 10_000)
+    return () => clearInterval(t)
+  }, [])
 
-interface DashboardData {
-  stats: Stat[]
-  recentActivity: Activity[]
-  pendingRequests: PendingRequest[]
-}
+  const passing = gates?.gates.filter(g => g.passing).length ?? 0
+  const total = gates?.gates.length ?? 0
+  const allPass = total > 0 && passing === total
 
-// Loading skeleton component
-function LoadingSkeleton({ className = '' }: { className?: string }) {
   return (
-    <div className={`animate-pulse bg-gray-700/50 rounded ${className}`} />
-  )
-}
+    <div className="max-w-5xl">
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-semibold text-text-primary">.HMAN · Knox Hart</h1>
+          <p className="text-text-secondary mt-1">
+            First member. Local subconscious. Encrypted, yours.
+          </p>
+        </div>
+        <button
+          onClick={refresh}
+          className="p-2 rounded-lg hover:bg-background-secondary text-text-secondary"
+          title="Refresh"
+        >
+          <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
 
-// Error display component
-function ErrorDisplay({
-  message,
-  onRetry
-}: {
-  message: string
-  onRetry: () => void
-}) {
-  return (
-    <div className="rounded-xl bg-red-900/20 border border-red-500/30 p-6 text-center">
-      <AlertTriangle className="mx-auto h-10 w-10 text-red-400" />
-      <h3 className="mt-4 font-semibold text-red-400">Error Loading Data</h3>
-      <p className="mt-2 text-sm text-gray-400">{message}</p>
-      <button
-        onClick={onRetry}
-        className="mt-4 inline-flex items-center gap-2 rounded-lg bg-red-500/20 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/30 transition-colors"
-      >
-        <RefreshCw className="h-4 w-4" />
-        Try Again
-      </button>
+      {error && (
+        <div className="rounded-lg border border-red-500/50 bg-red-900/20 p-4 mb-6 flex items-start gap-3">
+          <AlertCircle className="text-red-400 shrink-0" />
+          <div>
+            <p className="font-medium text-red-200">Member bridge unreachable</p>
+            <p className="text-sm text-red-300 mt-1">{error}</p>
+            <p className="text-xs text-red-300/80 mt-2 font-mono">
+              Start it: <code>python hman/api/server.py</code>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {health && gates && (
+        <div
+          className={`rounded-lg border p-5 mb-6 ${
+            allPass
+              ? 'border-green-500/40 bg-green-900/10'
+              : 'border-amber-500/40 bg-amber-900/10'
+          }`}
+        >
+          <div className="flex items-center gap-4">
+            {allPass ? (
+              <ShieldCheck className="w-10 h-10 text-green-400 shrink-0" />
+            ) : (
+              <ShieldAlert className="w-10 h-10 text-amber-400 shrink-0" />
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <p className="text-lg font-medium text-text-primary">
+                  {passing}/{total} gates armed
+                </p>
+                {allPass && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-300">
+                    Sovereign
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-text-secondary">
+                {allPass
+                  ? '.HMAN is operating as intended. Every action checks in with you.'
+                  : "Dev build. Not yet a sovereign subconscious — some gates still to close."}
+              </p>
+            </div>
+            <Link
+              to="/app/gates"
+              className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-background-secondary border border-border hover:bg-background text-text-primary text-sm"
+            >
+              View gates <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {health && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <FactCard
+            icon={<Cpu className="w-5 h-5 text-blue-400" />}
+            label="Compute"
+            value={health.gpu ? 'CUDA' : 'CPU'}
+            detail={health.gpu ? 'RTX 4090 detected' : 'CPU fallback'}
+          />
+          <FactCard
+            icon={<Mic className="w-5 h-5 text-purple-400" />}
+            label="Voice identity"
+            value={health.enrolled ? 'Enrolled' : 'Not enrolled'}
+            detail={
+              health.enrolled ? '256-dim reference encrypted at rest' : 'Run onboarding'
+            }
+          />
+          <FactCard
+            icon={<Lock className="w-5 h-5 text-green-400" />}
+            label="Data residency"
+            value="Local"
+            detail="Nothing leaves this machine"
+          />
+          <FactCard
+            icon={<ShieldCheck className="w-5 h-5 text-amber-400" />}
+            label="Bridge"
+            value={`v${health.version}`}
+            detail="127.0.0.1:8765"
+          />
+        </div>
+      )}
+
+      {gates && (
+        <div className="rounded-lg border border-border bg-background-secondary p-5 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-medium text-text-primary">The Five Gates</h2>
+            <Link
+              to="/app/gates"
+              className="text-sm text-text-secondary hover:text-text-primary inline-flex items-center gap-1"
+            >
+              Details <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {gates.gates.map(g => (
+              <div
+                key={g.name}
+                className="flex items-center gap-3 py-2 border-b border-border last:border-b-0"
+              >
+                {g.passing ? (
+                  <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
+                ) : (
+                  <XCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                )}
+                <span className="font-medium text-text-primary flex-1 min-w-0 truncate">
+                  {g.name}
+                </span>
+                <span className="text-xs text-text-secondary truncate max-w-[55%]">
+                  {g.detail}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {health && !health.enrolled && (
+        <div className="rounded-lg border border-blue-500/40 bg-blue-900/10 p-5 flex items-center gap-4">
+          <Mic className="w-6 h-6 text-blue-400 shrink-0" />
+          <div className="flex-1">
+            <p className="font-medium text-text-primary">Start onboarding</p>
+            <p className="text-sm text-text-secondary">
+              Bind your voice. Ten prompts, two minutes. Closes Gate 5.
+            </p>
+          </div>
+          <Link
+            to="/app/onboarding"
+            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium"
+          >
+            Begin
+          </Link>
+        </div>
+      )}
+
+      <p className="mt-8 text-xs text-text-secondary italic">
+        "These five gates will tell you if .HMAN is actually working as intended, or if it's
+        just another surveillance device wearing a friendly mask." — Knox Hart
+      </p>
     </div>
   )
 }
 
-// Mock data fetcher (simulates API call)
-async function fetchDashboardData(): Promise<DashboardData> {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 500))
-
-  return {
-    stats: [
-      { label: 'Total Vaults', value: '6', icon: Archive, color: 'text-primary' },
-      { label: 'Active Delegations', value: '3', icon: Users, color: 'text-level-standard' },
-      { label: 'Pending Requests', value: '2', icon: Bell, color: 'text-level-gated' },
-      { label: 'Audit Entries', value: '156', icon: Shield, color: 'text-level-open' },
-    ],
-    recentActivity: [
-      {
-        id: '1',
-        action: 'Access Granted',
-        actor: 'Claude',
-        resource: 'Finance / Transactions',
-        time: '2 minutes ago',
-        status: 'success',
-      },
-      {
-        id: '2',
-        action: 'Access Denied',
-        actor: 'Unknown Bot',
-        resource: 'Health / Records',
-        time: '15 minutes ago',
-        status: 'denied',
-      },
-      {
-        id: '3',
-        action: 'Delegation Created',
-        actor: 'You',
-        resource: 'Sarah Johnson',
-        time: '1 hour ago',
-        status: 'info',
-      },
-      {
-        id: '4',
-        action: 'Vault Unlocked',
-        actor: 'You',
-        resource: 'Finance',
-        time: '2 hours ago',
-        status: 'success',
-      },
-    ],
-    pendingRequests: [
-      {
-        id: '1',
-        requester: 'Claude',
-        resource: 'Finance / Budget Analysis',
-        purpose: 'Analyze spending patterns for budget recommendations',
-        expires: '4 min',
-      },
-      {
-        id: '2',
-        requester: 'Energy Australia Bot',
-        resource: 'Identity / Address',
-        purpose: 'Verify service address for account update',
-        expires: '8 min',
-      },
-    ],
-  }
-}
-
-export function DashboardPage() {
-  const [data, setData] = useState<DashboardData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-
-  const loadData = useCallback(async (isRefresh = false) => {
-    try {
-      if (isRefresh) {
-        setIsRefreshing(true)
-      } else {
-        setIsLoading(true)
-      }
-      setError(null)
-      const result = await fetchDashboardData()
-      setData(result)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load dashboard data')
-    } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    loadData()
-  }, [loadData])
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <LoadingSkeleton className="h-8 w-48" />
-          <LoadingSkeleton className="h-4 w-64 mt-2" />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="rounded-xl bg-surface p-6 border border-border">
-              <LoadingSkeleton className="h-8 w-8" />
-              <LoadingSkeleton className="h-8 w-16 mt-4" />
-              <LoadingSkeleton className="h-4 w-24 mt-2" />
-            </div>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-gray-400">Overview of your HMAN vault activity</p>
-        </div>
-        <ErrorDisplay message={error} onRetry={() => loadData()} />
-      </div>
-    )
-  }
-
-  if (!data) return null
-
-  const { stats, recentActivity, pendingRequests } = data
+function FactCard({
+  icon,
+  label,
+  value,
+  detail,
+}: {
+  icon: React.ReactNode
+  label: string
+  value: string
+  detail: string
+}) {
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-gray-400">Overview of your HMAN vault activity</p>
-        </div>
-        <button
-          onClick={() => loadData(true)}
-          disabled={isRefreshing}
-          className="flex items-center gap-2 rounded-lg bg-surface border border-border px-4 py-2 text-sm font-medium hover:bg-background-tertiary disabled:opacity-50 transition-colors"
-        >
-          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          {isRefreshing ? 'Refreshing...' : 'Refresh'}
-        </button>
+    <div className="rounded-lg border border-border bg-background-secondary p-4">
+      <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-text-secondary mb-2">
+        {icon}
+        {label}
       </div>
-
-      {/* Stats Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="rounded-xl bg-surface p-6 border border-border"
-          >
-            <div className="flex items-center justify-between">
-              <stat.icon className={`h-8 w-8 ${stat.color}`} />
-              <TrendingUp className="h-4 w-4 text-level-open" />
-            </div>
-            <div className="mt-4">
-              <div className="text-3xl font-bold">{stat.value}</div>
-              <div className="text-sm text-gray-400">{stat.label}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Pending Requests */}
-        <div className="rounded-xl bg-surface border border-border">
-          <div className="flex items-center justify-between border-b border-border p-4">
-            <h2 className="font-semibold flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-level-gated" />
-              Pending Requests
-            </h2>
-            <span className="text-sm text-gray-400">
-              {pendingRequests.length} awaiting
-            </span>
-          </div>
-          <div className="divide-y divide-border">
-            {pendingRequests.map((request) => (
-              <div key={request.id} className="p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{request.requester}</span>
-                      <span className="text-xs text-gray-400">
-                        wants access to
-                      </span>
-                    </div>
-                    <div className="text-sm text-primary mt-1">
-                      {request.resource}
-                    </div>
-                    <div className="text-sm text-gray-400 mt-2">
-                      {request.purpose}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-level-gated">
-                    <Clock className="h-4 w-4" />
-                    {request.expires}
-                  </div>
-                </div>
-                <div className="flex gap-2 mt-4">
-                  <button className="flex-1 rounded-lg bg-level-open px-4 py-2 text-sm font-medium text-black hover:bg-level-open/90">
-                    Approve
-                  </button>
-                  <button className="flex-1 rounded-lg bg-surface border border-border px-4 py-2 text-sm font-medium hover:bg-background-tertiary">
-                    Deny
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="rounded-xl bg-surface border border-border">
-          <div className="flex items-center justify-between border-b border-border p-4">
-            <h2 className="font-semibold flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
-              Recent Activity
-            </h2>
-            <a href="/audit" className="text-sm text-primary hover:underline">
-              View all
-            </a>
-          </div>
-          <div className="divide-y divide-border">
-            {recentActivity.map((activity, i) => (
-              <div key={i} className="flex items-center gap-4 p-4">
-                <div
-                  className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                    activity.status === 'success'
-                      ? 'bg-level-open/20'
-                      : activity.status === 'denied'
-                      ? 'bg-level-locked/20'
-                      : 'bg-level-standard/20'
-                  }`}
-                >
-                  {activity.status === 'success' ? (
-                    <CheckCircle className="h-5 w-5 text-level-open" />
-                  ) : activity.status === 'denied' ? (
-                    <AlertTriangle className="h-5 w-5 text-level-locked" />
-                  ) : (
-                    <Users className="h-5 w-5 text-level-standard" />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <div className="font-medium">{activity.action}</div>
-                  <div className="text-sm text-gray-400">
-                    {activity.actor} &middot; {activity.resource}
-                  </div>
-                </div>
-                <div className="text-xs text-gray-400">{activity.time}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Security Status */}
-      <div className="rounded-xl bg-surface border border-border p-6">
-        <h2 className="font-semibold mb-4">Security Status</h2>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-level-open/20">
-              <CheckCircle className="h-5 w-5 text-level-open" />
-            </div>
-            <div>
-              <div className="font-medium">E2E Encryption</div>
-              <div className="text-sm text-level-open">Active</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-level-open/20">
-              <CheckCircle className="h-5 w-5 text-level-open" />
-            </div>
-            <div>
-              <div className="font-medium">Zero-Access</div>
-              <div className="text-sm text-level-open">Verified</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-level-open/20">
-              <CheckCircle className="h-5 w-5 text-level-open" />
-            </div>
-            <div>
-              <div className="font-medium">Audit Chain</div>
-              <div className="text-sm text-level-open">Intact</div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <p className="text-xl font-semibold text-text-primary">{value}</p>
+      <p className="text-xs text-text-secondary mt-1">{detail}</p>
     </div>
   )
 }

@@ -1,4 +1,7 @@
+export { WelcomePage } from './WelcomePage'
 export { DashboardPage } from './DashboardPage'
+export { OnboardingPage } from './OnboardingPage'
+export { GatesPage } from './GatesPage'
 export { VaultsPage } from './VaultsPage'
 export { RequestsPage } from './RequestsPage'
 export { AuditPage } from './AuditPage'
