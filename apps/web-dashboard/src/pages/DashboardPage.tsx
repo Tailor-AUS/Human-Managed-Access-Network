@@ -107,7 +107,7 @@ export function DashboardPage() {
               </p>
             </div>
             <Link
-              to="/gates"
+              to="/app/gates"
               className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-background-secondary border border-border hover:bg-background text-text-primary text-sm"
             >
               View gates <ArrowRight className="w-4 h-4" />
@@ -152,7 +152,7 @@ export function DashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium text-text-primary">The Five Gates</h2>
             <Link
-              to="/gates"
+              to="/app/gates"
               className="text-sm text-text-secondary hover:text-text-primary inline-flex items-center gap-1"
             >
               Details <ArrowRight className="w-3 h-3" />
@@ -191,7 +191,7 @@ export function DashboardPage() {
             </p>
           </div>
           <Link
-            to="/onboarding"
+            to="/app/onboarding"
             className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium"
           >
             Begin

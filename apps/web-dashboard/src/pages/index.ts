@@ -1,3 +1,4 @@
+export { WelcomePage } from './WelcomePage'
 export { DashboardPage } from './DashboardPage'
 export { OnboardingPage } from './OnboardingPage'
 export { GatesPage } from './GatesPage'
