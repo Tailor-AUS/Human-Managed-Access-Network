@@ -8,11 +8,15 @@ import {
   Settings,
   Menu,
   X,
+  Mic,
+  ShieldCheck,
 } from 'lucide-react'
 import { useState } from 'react'
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/onboarding', label: 'Onboarding', icon: Mic },
+  { path: '/gates', label: 'Gates', icon: ShieldCheck },
   { path: '/vaults', label: 'Vaults', icon: Archive },
   { path: '/requests', label: 'Requests', icon: Bell, badge: 2 },
   { path: '/audit', label: 'Audit Log', icon: Shield },
@@ -81,11 +85,11 @@ export function Layout() {
         <div className="absolute bottom-0 left-0 right-0 border-t border-border p-4">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
-              <span className="text-sm font-medium text-primary">JD</span>
+              <span className="text-sm font-medium text-primary">KH</span>
             </div>
             <div>
-              <div className="text-sm font-medium">John Doe</div>
-              <div className="text-xs text-gray-400">Personal Account</div>
+              <div className="text-sm font-medium">Knox Hart</div>
+              <div className="text-xs text-gray-400">Member · v1.0</div>
             </div>
           </div>
         </div>
