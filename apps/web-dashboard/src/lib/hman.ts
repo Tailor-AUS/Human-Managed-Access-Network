@@ -5,6 +5,28 @@ const BASE =
   ((import.meta as unknown as { env?: Record<string, string> }).env?.VITE_HMAN_BRIDGE) ??
   'http://127.0.0.1:8765'
 
+// Bearer token for remote/production bridges.
+// Dev (localhost) typically has no token. Production tunnels must use one.
+// Stored in localStorage so it persists across page reloads. Setter lets
+// the UI prompt for it when 401 is returned.
+const TOKEN_KEY = 'hman.bridge.token'
+export const token = {
+  get: (): string | null => {
+    try { return localStorage.getItem(TOKEN_KEY) } catch { return null }
+  },
+  set: (v: string | null) => {
+    try {
+      if (v) localStorage.setItem(TOKEN_KEY, v)
+      else localStorage.removeItem(TOKEN_KEY)
+    } catch {}
+  },
+}
+
+function authHeaders(): HeadersInit {
+  const t = token.get()
+  return t ? { Authorization: `Bearer ${t}` } : {}
+}
+
 export interface Health {
   ok: boolean
   version: string
@@ -80,18 +102,18 @@ async function j<T>(r: Response): Promise<T> {
 
 export const hman = {
   async health(): Promise<Health> {
-    return j(await fetch(`${BASE}/api/health`))
+    return j(await fetch(`${BASE}/api/health`, { headers: authHeaders() }))
   },
 
   async gates(): Promise<GatesResponse> {
-    return j(await fetch(`${BASE}/api/gates`))
+    return j(await fetch(`${BASE}/api/gates`, { headers: authHeaders() }))
   },
 
   async startEnrollment(passphrase: string, memberId = 'member'): Promise<EnrollmentSession> {
     return j(
       await fetch(`${BASE}/api/enrollment/session`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ passphrase, member_id: memberId }),
       }),
     )
@@ -109,6 +131,7 @@ export const hman = {
     return j(
       await fetch(`${BASE}/api/enrollment/sample`, {
         method: 'POST',
+        headers: authHeaders(),
         body: form,
       }),
     )
@@ -120,26 +143,29 @@ export const hman = {
     return j(
       await fetch(`${BASE}/api/enrollment/finalize`, {
         method: 'POST',
+        headers: authHeaders(),
         body: form,
       }),
     )
   },
 
   async gate5Status(): Promise<Gate5Status> {
-    return j(await fetch(`${BASE}/api/gate5/status`))
+    return j(await fetch(`${BASE}/api/gate5/status`, { headers: authHeaders() }))
   },
 
   async gate5Unlock(passphrase: string): Promise<Gate5Unlock> {
     return j(
       await fetch(`${BASE}/api/gate5/unlock`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ passphrase }),
       }),
     )
   },
 
   async gate5Lock(): Promise<{ armed: boolean }> {
-    return j(await fetch(`${BASE}/api/gate5/lock`, { method: 'POST' }))
+    return j(
+      await fetch(`${BASE}/api/gate5/lock`, { method: 'POST', headers: authHeaders() }),
+    )
   },
 }

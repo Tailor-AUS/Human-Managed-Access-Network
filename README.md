@@ -79,6 +79,24 @@ on your behalf is cryptographically gated to you.
 
 ---
 
+## Deploy to production
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the full prod stack (Cloudflare Pages
+for the static frontend + Cloudflare Tunnel for the bridge + Windows
+auto-start task). Once set up, a sovereign deploy looks like:
+
+```
+https://hman.tailor.au          → front door (Cloudflare Pages)
+https://hman.tailor.au/app      → member app
+https://bridge.tailor.au        → your desktop bridge (over tunnel)
+~/.hman/                         → encrypted voice reference, audit log
+```
+
+No cloud model inference. No open ports. Your hardware, your keys, your
+consent on every action.
+
+---
+
 ## Signal-based flow (earlier pattern)
 
 In addition to the local-first app, .HMAN also supports a Signal-based

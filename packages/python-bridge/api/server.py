@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import secrets
 import sys
 import threading
@@ -26,7 +27,7 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -36,13 +37,51 @@ import core  # noqa: E402
 
 app = FastAPI(title=".HMAN Member Bridge", version="0.1.0")
 
+# Allowed origins:
+#   dev (localhost)
+#   anything listed in HMAN_ALLOWED_ORIGINS (comma-separated) for production
+_default_origins = ["http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5173"]
+_extra = os.environ.get("HMAN_ALLOWED_ORIGINS", "").strip()
+_allowed_origins = _default_origins + [o.strip() for o in _extra.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5173"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── Bearer-token auth for remote use ────────────────────────────────
+#
+# Set HMAN_AUTH_TOKEN in the environment. If unset, auth is DISABLED
+# (dev only). When set, every /api/* request must carry
+# "Authorization: Bearer <token>" or it gets 401. Keeps the bridge
+# closed when reachable over a tunnel or public URL.
+_AUTH_TOKEN = os.environ.get("HMAN_AUTH_TOKEN", "").strip() or None
+
+_PUBLIC_PATHS = {"/", "/openapi.json", "/docs", "/redoc", "/docs/oauth2-redirect"}
+
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    from fastapi.responses import JSONResponse
+    # No token configured → dev mode, everything open
+    if _AUTH_TOKEN is None:
+        return await call_next(request)
+    # Public paths (docs, schema) stay open
+    if request.url.path in _PUBLIC_PATHS or not request.url.path.startswith("/api/"):
+        return await call_next(request)
+    # Preflight CORS must not be gated — browser never attaches auth to OPTIONS
+    if request.method == "OPTIONS":
+        return await call_next(request)
+    header = request.headers.get("authorization", "")
+    if not header.startswith("Bearer "):
+        return JSONResponse(status_code=401, content={"detail": "missing bearer token"})
+    submitted = header[len("Bearer "):].strip()
+    if not secrets.compare_digest(submitted, _AUTH_TOKEN):
+        return JSONResponse(status_code=401, content={"detail": "invalid bearer token"})
+    return await call_next(request)
 
 # ── In-memory session store (single-user, single-process is fine for local) ──
 

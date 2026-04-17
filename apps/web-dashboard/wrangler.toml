@@ -1,0 +1,27 @@
+# Cloudflare Pages deployment for the .HMAN member app.
+#
+# Deploy:
+#   npm run build
+#   npx wrangler pages deploy dist --project-name hman
+#
+# First time only — create the Pages project:
+#   npx wrangler login
+#   npx wrangler pages project create hman --production-branch main
+#
+# Custom domain (hman.tailor.au):
+#   # Requires tailor.au on Cloudflare. Add a CNAME for hman → <your-project>.pages.dev
+#   # in Cloudflare Dashboard → Pages → hman → Custom domains → Set up a custom domain.
+
+name = "hman"
+pages_build_output_dir = "dist"
+
+# Environment variables injected at build time. For Cloudflare Pages you
+# also want to set these in the dashboard (Pages → Settings → Environment
+# variables) so production builds pick them up automatically.
+[vars]
+# Set on the Pages project dashboard in production; leave blank here so
+# a local build doesn't bake a stale URL into the bundle.
+
+[env.production]
+[env.production.vars]
+# Set via Pages dashboard — not committed.
