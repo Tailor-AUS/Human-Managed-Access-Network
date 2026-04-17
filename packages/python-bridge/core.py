@@ -243,16 +243,21 @@ def write_enrollment_log(session: EnrollmentSession, reference: np.ndarray) -> P
 
 
 # ── Canonical enrollment prompts ────────────────────────────────────
+#
+# Ten phonetically diverse sentences spanning English vowels, plosives,
+# fricatives, nasals, liquids, and digit pronunciations. No personal
+# content — the prompts are identical for every member so the voice
+# reference captures your voice, not your biography.
 
 PROMPTS: list[str] = [
-    "Sovereign AI runs locally on my hardware, not someone else's cloud.",
-    "Bridget and the kids — Winston, Goldie, and Primmie — mean everything.",
-    "Tailor accelerates consensus. Bank handles flows. HMAN gates everything.",
-    "Gemma four runs on the four-ninety. Llama three point two handles the quick calls.",
-    "If the oil crisis is not a wake-up call for onshoring, politicians need to move.",
-    "Project Wattle is a twenty-two nanometre inference chip. Global Foundries. RISC-V.",
-    "The five gates: light bulb, member control, extension, reactive, voice-bound.",
-    "Seventy-five, six thousand and thirty-two. Eighteenth of April, Saturday.",
-    "She walks. She runs. She thinks. She writes. She draws. She dances.",
-    "Checking, sending, logged, saved, done. Drafting with clipboard.",
+    "My subconscious stays here. Local, encrypted, mine alone.",
+    "Once I speak, nothing else in the room can activate it.",
+    "Three green lights. Two amber. One guarantee: my consent.",
+    "The quick brown fox jumps over the lazy dog beside the blue lake.",
+    "Seven, fourteen, twenty-one, forty-two, one hundred and nine.",
+    "Shadows fall on polished marble as the evening settles in.",
+    "If no one asks, I stay silent. If I speak, I am brief.",
+    "Thursday, August the eighteenth, nineteen ninety-eight, six-thirty PM.",
+    "She writes. She walks. She thinks. She breathes. She answers.",
+    "Checking, sending, logged, saved, done. Calm and precise.",
 ]

@@ -48,9 +48,9 @@ export function DashboardPage() {
     <div className="max-w-5xl">
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-semibold text-text-primary">.HMAN · Knox Hart</h1>
+          <h1 className="text-3xl font-semibold text-text-primary">.HMAN</h1>
           <p className="text-text-secondary mt-1">
-            First member. Local subconscious. Encrypted, yours.
+            Your local subconscious. Encrypted, yours.
           </p>
         </div>
         <button
@@ -201,7 +201,7 @@ export function DashboardPage() {
 
       <p className="mt-8 text-xs text-text-secondary italic">
         "These five gates will tell you if .HMAN is actually working as intended, or if it's
-        just another surveillance device wearing a friendly mask." — Knox Hart
+        just another surveillance device wearing a friendly mask."
       </p>
     </div>
   )

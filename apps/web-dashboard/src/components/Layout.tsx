@@ -85,11 +85,11 @@ export function Layout() {
         <div className="absolute bottom-0 left-0 right-0 border-t border-border p-4">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
-              <span className="text-sm font-medium text-primary">KH</span>
+              <span className="text-sm font-medium text-primary">M1</span>
             </div>
             <div>
-              <div className="text-sm font-medium">Knox Hart</div>
-              <div className="text-xs text-gray-400">Member · v1.0</div>
+              <div className="text-sm font-medium">Member</div>
+              <div className="text-xs text-gray-400">v1.0</div>
             </div>
           </div>
         </div>

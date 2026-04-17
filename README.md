@@ -27,7 +27,7 @@ now and seven billion members eventually.
 
 > *"These five gates will tell you if .HMAN is actually working as
 > intended, or if it's just another surveillance device wearing a friendly
-> mask."* — Knox Hart, first member
+> mask."*
 
 ---
 
