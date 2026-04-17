@@ -1,0 +1,24 @@
+# .HMAN Python bridge dependencies
+# Install: pip install -r requirements.txt
+
+# Web server
+fastapi>=0.110,<1.0
+uvicorn[standard]>=0.27
+python-multipart>=0.0.9
+
+# Audio I/O
+sounddevice>=0.4.6
+soundfile>=0.12.1
+librosa>=0.10
+
+# Voice biometrics
+resemblyzer>=0.1.4
+torch>=2.0            # CUDA build recommended; CPU fallback works
+
+# Cryptography
+cryptography>=42.0
+
+# Misc
+numpy>=1.24
+requests>=2.31
+pyyaml>=6.0           # stakeholder/config files
