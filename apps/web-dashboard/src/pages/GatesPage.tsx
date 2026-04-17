@@ -251,7 +251,7 @@ export function GatesPage() {
           <div className="mt-8 pt-6 border-t border-border">
             <p className="text-xs text-text-secondary italic">
               "These five gates will tell you if .HMAN is actually working as intended, or if it's
-              just another surveillance device wearing a friendly mask." — Knox Hart
+              just another surveillance device wearing a friendly mask."
             </p>
           </div>
         </>

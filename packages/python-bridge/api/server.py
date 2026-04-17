@@ -60,7 +60,7 @@ class HealthResponse(BaseModel):
 
 class EnrollmentStart(BaseModel):
     passphrase: str
-    member_id: str = "knox-hart"
+    member_id: str = "member"
 
 
 class EnrollmentSessionOut(BaseModel):
@@ -519,7 +519,7 @@ def gates():
     )
 
     return GatesResponse(
-        member_id="knox-hart",
+        member_id="member",
         gates=gates_out,
         last_activation=_gate5_last_activation,
         rejections_last_hour=_gate5_rejects,  # simplified; real rolling-hour later

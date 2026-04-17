@@ -47,7 +47,7 @@ export function WelcomePage() {
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-6 h-6 text-blue-400" />
           <span className="text-lg font-semibold">.HMAN</span>
-          <span className="text-xs text-text-secondary ml-2">v0.1 · first member</span>
+          <span className="text-xs text-text-secondary ml-2">v0.1 · prototype</span>
         </div>
         <nav className="flex items-center gap-4 text-sm text-text-secondary">
           <a
@@ -254,7 +254,6 @@ cd apps/web-dashboard && npm run dev`}
           &ldquo;These five gates will tell you if .HMAN is actually working as intended,
           or if it&rsquo;s just another surveillance device wearing a friendly mask.&rdquo;
         </p>
-        <p className="mt-6 text-sm text-text-secondary">— Knox Hart, first member</p>
       </section>
 
       {/* Footer */}

@@ -54,20 +54,20 @@ RMS_MIN = 0.01             # below this = silence / not speaking
 RMS_MAX = 0.40             # above this = clipping
 PBKDF2_ITERATIONS = 600_000
 
-# Phonetically diverse enrollment prompts — covers all English vowels,
-# plosives, fricatives, sibilants, nasals, liquids, diphthongs.
-# Includes Knox's vocabulary: sovereign, Tailor, Gemma, Bridget, Goldie, Primmie.
+# Phonetically diverse enrollment prompts — covers English vowels,
+# plosives, fricatives, nasals, liquids, diphthongs, and digits.
+# No personal content. Identical for every member.
 PROMPTS = [
-    "Sovereign AI runs locally on my hardware, not someone else's cloud.",
-    "Bridget and the kids — Winston, Goldie, and Primmie — mean everything.",
-    "Tailor accelerates consensus. Bank handles flows. HMAN gates everything.",
-    "Gemma four runs on the four-ninety. Llama three point two handles the quick calls.",
-    "If the oil crisis is not a wake-up call for onshoring, politicians need to move.",
-    "Project Wattle is a twenty-two nanometre inference chip. Global Foundries. RISC-V.",
-    "The five gates: light bulb, member control, extension, reactive, voice-bound.",
-    "Seventy-five, six thousand and thirty-two. Eighteenth of April, Saturday.",
-    "She walks. She runs. She thinks. She writes. She draws. She dances.",
-    "Checking, sending, logged, saved, done. Drafting with clipboard.",
+    "My subconscious stays here. Local, encrypted, mine alone.",
+    "Once I speak, nothing else in the room can activate it.",
+    "Three green lights. Two amber. One guarantee: my consent.",
+    "The quick brown fox jumps over the lazy dog beside the blue lake.",
+    "Seven, fourteen, twenty-one, forty-two, one hundred and nine.",
+    "Shadows fall on polished marble as the evening settles in.",
+    "If no one asks, I stay silent. If I speak, I am brief.",
+    "Thursday, August the eighteenth, nineteen ninety-eight, six-thirty PM.",
+    "She writes. She walks. She thinks. She breathes. She answers.",
+    "Checking, sending, logged, saved, done. Calm and precise.",
 ]
 
 
@@ -196,7 +196,7 @@ def _pick_mic(device: int | None) -> int:
 def main():
     parser = argparse.ArgumentParser(description=".HMAN voice enrollment")
     parser.add_argument("--device", type=int, default=None, help="audio input device index")
-    parser.add_argument("--member-id", default="knox-hart", help="member identifier")
+    parser.add_argument("--member-id", default="member", help="member identifier")
     parser.add_argument("--model", default="resemblyzer", choices=["resemblyzer"])
     parser.add_argument("--passphrase", default=None, help="non-interactive passphrase (DEV ONLY)")
     args = parser.parse_args()

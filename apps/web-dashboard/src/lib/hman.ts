@@ -87,7 +87,7 @@ export const hman = {
     return j(await fetch(`${BASE}/api/gates`))
   },
 
-  async startEnrollment(passphrase: string, memberId = 'knox-hart'): Promise<EnrollmentSession> {
+  async startEnrollment(passphrase: string, memberId = 'member'): Promise<EnrollmentSession> {
     return j(
       await fetch(`${BASE}/api/enrollment/session`, {
         method: 'POST',
