@@ -218,7 +218,7 @@ export function GatesPage() {
                             </div>
                           ) : (
                             <a
-                              href="/onboarding"
+                              href="/app/onboarding"
                               className="text-xs inline-flex items-center gap-1 text-blue-400 hover:text-blue-300"
                             >
                               <Mic className="w-3.5 h-3.5" /> Enroll your voice

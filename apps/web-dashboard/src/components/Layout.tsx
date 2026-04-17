@@ -14,14 +14,14 @@ import {
 import { useState } from 'react'
 
 const navItems = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/onboarding', label: 'Onboarding', icon: Mic },
-  { path: '/gates', label: 'Gates', icon: ShieldCheck },
-  { path: '/vaults', label: 'Vaults', icon: Archive },
-  { path: '/requests', label: 'Requests', icon: Bell, badge: 2 },
-  { path: '/audit', label: 'Audit Log', icon: Shield },
-  { path: '/delegations', label: 'Delegations', icon: Users },
-  { path: '/settings', label: 'Settings', icon: Settings },
+  { path: '/app', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { path: '/app/onboarding', label: 'Onboarding', icon: Mic },
+  { path: '/app/gates', label: 'Gates', icon: ShieldCheck },
+  { path: '/app/vaults', label: 'Vaults', icon: Archive },
+  { path: '/app/requests', label: 'Requests', icon: Bell, badge: 2 },
+  { path: '/app/audit', label: 'Audit Log', icon: Shield },
+  { path: '/app/delegations', label: 'Delegations', icon: Users },
+  { path: '/app/settings', label: 'Settings', icon: Settings },
 ]
 
 export function Layout() {
@@ -61,7 +61,7 @@ export function Layout() {
             <NavLink
               key={item.path}
               to={item.path}
-              end={item.path === '/'}
+              end={item.end ?? false}
               className={({ isActive }) =>
                 `flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
                   isActive
