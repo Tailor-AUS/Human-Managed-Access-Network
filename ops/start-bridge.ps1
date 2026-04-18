@@ -1,4 +1,4 @@
-# .HMAN — bridge + tunnel launcher for Windows.
+# .HMAN -- bridge + tunnel launcher for Windows.
 #
 # Three ingress modes:
 #   -Tunnel none         local-only (127.0.0.1:8765)
@@ -27,7 +27,7 @@ $envFile = Join-Path $dataDir 'bridge.env'
 
 if (-not (Test-Path $dataDir)) { New-Item -ItemType Directory -Path $dataDir | Out-Null }
 
-# ── Load env file if present ──────────────────────────────────────
+# -- Load env file if present --------------------------------------
 
 if (Test-Path $envFile) {
     Get-Content $envFile | ForEach-Object {
@@ -48,7 +48,7 @@ if (-not $env:HMAN_AUTH_TOKEN) {
     Write-Host ""
 }
 
-# ── Start the Python bridge ───────────────────────────────────────
+# -- Start the Python bridge ---------------------------------------
 
 Push-Location $bridgeDir
 try {
@@ -65,7 +65,7 @@ try {
     Pop-Location
 }
 
-# ── Start the ingress ─────────────────────────────────────────────
+# -- Start the ingress ---------------------------------------------
 
 switch ($Tunnel) {
     'azure' {
@@ -99,7 +99,7 @@ switch ($Tunnel) {
         Start-Process -FilePath 'cloudflared' `
             -ArgumentList "tunnel --url http://127.0.0.1:$Port" `
             -WindowStyle Normal
-        Write-Host "Cloudflare Quick Tunnel starting — URL appears in the cloudflared window." -ForegroundColor Green
+        Write-Host "Cloudflare Quick Tunnel starting -- URL appears in the cloudflared window." -ForegroundColor Green
         Write-Host "Copy it into apps/web-dashboard/.env.production as VITE_HMAN_BRIDGE" -ForegroundColor DarkGray
     }
     default { Write-Host "Local-only mode. Bridge is at http://127.0.0.1:$Port" -ForegroundColor DarkGray }

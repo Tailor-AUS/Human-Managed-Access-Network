@@ -40,6 +40,11 @@ var keyName = cfg["HMAN_RELAY_KEYNAME"] ?? "listener";
 var key = Required("HMAN_RELAY_KEY");
 var localBridge = new Uri(cfg["HMAN_LOCAL_BRIDGE_URL"] ?? "http://127.0.0.1:8765");
 
+// Azure Relay preserves the hybrid-connection-name prefix in the URL it
+// forwards to the listener. We strip "/<path>" before proxying so the
+// local bridge sees the same URLs clients would use calling it directly.
+var relayPrefix = "/" + path.Trim('/');
+
 var tokenProvider = TokenProvider.CreateSharedAccessSignatureTokenProvider(keyName, key);
 var listener = new HybridConnectionListener(new Uri($"sb://{ns}/{path}"), tokenProvider);
 
@@ -59,8 +64,17 @@ listener.RequestHandler = async ctx =>
         target = req.Url.PathAndQuery;
         var method = req.HttpMethod ?? "GET";
 
+        // Strip the hybrid-connection prefix ("/member-bridge") so the
+        // local FastAPI sees clean /api/* paths.
+        var forwardTarget = target;
+        if (forwardTarget.StartsWith(relayPrefix, StringComparison.Ordinal))
+        {
+            forwardTarget = forwardTarget.Substring(relayPrefix.Length);
+            if (forwardTarget.Length == 0 || forwardTarget[0] != '/') forwardTarget = "/" + forwardTarget;
+        }
+
         // Build a matching request to the local FastAPI bridge
-        using var proxied = new HttpRequestMessage(new HttpMethod(method), target);
+        using var proxied = new HttpRequestMessage(new HttpMethod(method), forwardTarget);
 
         // Copy request headers, skipping ones HttpClient controls for us
         foreach (var headerName in req.Headers.AllKeys.OfType<string>())
