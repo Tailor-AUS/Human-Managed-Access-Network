@@ -1,0 +1,20 @@
+# Local environment — different per member deployment
+.env
+.env.local
+.env.production
+.env.development
+.env.preview
+.env.*.local
+
+# Build output
+dist/
+.vite/
+
+# Deps
+node_modules/
+
+# SWA CLI state
+.swa/
+
+# Wrangler state
+.wrangler/
