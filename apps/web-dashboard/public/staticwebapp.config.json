@@ -1,7 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/staticwebapp.config.json",
 
-  "// routes": "Fallback to index.html for the SPA router. Static files are served first by SWA.",
   "navigationFallback": {
     "rewrite": "/index.html",
     "exclude": [
@@ -14,13 +13,11 @@
     ]
   },
 
-  "// mimeTypes": "Force correct types for PWA files (SWA gets these wrong otherwise).",
   "mimeTypes": {
     ".webmanifest": "application/manifest+json",
     ".svg": "image/svg+xml"
   },
 
-  "// globalHeaders": "Security and privacy defaults. These apply to every response.",
   "globalHeaders": {
     "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
     "x-content-type-options": "nosniff",
@@ -30,7 +27,6 @@
     "cross-origin-opener-policy": "same-origin"
   },
 
-  "// auth": "We rely on the bridge's bearer token for API access. SWA's built-in auth stays off by default so the public front door is browsable. Enable per-route below if you want Entra ID gating on /app.",
   "responseOverrides": {
     "401": {
       "statusCode": 401,
