@@ -1,0 +1,23 @@
+{
+  "$schema": "https://aka.ms/azure/static-web-apps-cli/schema",
+  "configurations": {
+    "production": {
+      "appLocation": ".",
+      "outputLocation": "dist",
+      "appBuildCommand": "npm run build",
+      "deploymentToken": "",
+      "appName": "stapp-hman-prod",
+      "resourceGroup": "rg-hman-prod",
+      "env": "production"
+    },
+    "preview": {
+      "appLocation": ".",
+      "outputLocation": "dist",
+      "appBuildCommand": "npm run build",
+      "deploymentToken": "",
+      "appName": "stapp-hman-prod",
+      "resourceGroup": "rg-hman-prod",
+      "env": "preview"
+    }
+  }
+}

@@ -1,0 +1,48 @@
+# Deploy the web dashboard to Azure Static Web Apps on push to main.
+#
+# Requires a repository secret:
+#   AZURE_STATIC_WEB_APPS_API_TOKEN
+# Get it with:
+#   az staticwebapp secrets list --name stapp-hman-prod --resource-group rg-hman-prod \
+#     --query 'properties.apiKey' -o tsv
+#
+# Optional env vars for the build (set as GitHub Actions variables):
+#   VITE_HMAN_BRIDGE   e.g. https://bridge.tailor.au
+
+name: deploy-azure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/web-dashboard/**"
+      - ".github/workflows/deploy-azure.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+concurrency:
+  group: deploy-azure
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Azure Static Web Apps
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: upload
+          app_location: "apps/web-dashboard"
+          output_location: "dist"
+          skip_app_build: false
+        env:
+          VITE_HMAN_BRIDGE: ${{ vars.VITE_HMAN_BRIDGE }}

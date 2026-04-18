@@ -35,16 +35,28 @@ now and seven billion members eventually.
 
 ```
 apps/
-  web-dashboard/           ← React/Vite front door + member app
-                              http://localhost:5173
+  web-dashboard/                ← React/Vite front door + member app (localhost:5173)
 packages/
-  core/                    ← TypeScript SDK (access gate, vaults, audit)
-  mcp-server/              ← MCP integration for Claude Desktop, etc.
-  shared/                  ← shared types
-  python-bridge/           ← local HTTP bridge (voice ID, enrolment, gates)
-                              http://127.0.0.1:8765
+  core/                         ← TypeScript SDK (access gate, vaults, audit)
+  mcp-server/                   ← MCP integration for Claude Desktop, etc.
+  shared/                       ← shared types
+  python-bridge/                ← local HTTP bridge (voice ID, enrolment, gates)
+                                   FastAPI on 127.0.0.1:8765
+  bridge-relay-listener/        ← .NET 9 Azure Relay listener — makes the
+                                   local bridge reachable via bridge.<your-domain>
+                                   with no inbound ports on your home network
+infra/
+  main.bicep + modules/         ← Azure infrastructure as code
+                                   (Static Web Apps, Relay, Key Vault,
+                                   App Insights, DNS)
+ops/
+  azure-deploy.ps1              ← one-command Azure deployment
+  start-bridge.ps1              ← local bridge + tunnel launcher
+  install-windows-service.ps1   ← auto-start on Windows login
+  cloudflared.example.yml       ← Cloudflare alternative config
 docs/
-  VISION.md                ← the five-gate manifesto
+  VISION.md                     ← the five-gate manifesto
+DEPLOYMENT.md                   ← full production stack (Azure + Cloudflare)
 ```
 
 ---
@@ -81,19 +93,40 @@ on your behalf is cryptographically gated to you.
 
 ## Deploy to production
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for the full prod stack (Cloudflare Pages
-for the static frontend + Cloudflare Tunnel for the bridge + Windows
-auto-start task). Once set up, a sovereign deploy looks like:
+Two supported paths — pick based on your infrastructure:
+
+**Azure (primary, Bicep + Static Web Apps + Azure Relay)**
+
+```powershell
+pwsh -File ops/azure-deploy.ps1 `
+  -ResourceGroup rg-hman-prod `
+  -WebDomain hman.tailor.au `
+  -BridgeDomain bridge.tailor.au `
+  -DnsZone tailor.au
+```
+
+**Cloudflare (community, Pages + Tunnel)**
+
+```powershell
+cloudflared login
+cloudflared tunnel create hman-bridge
+cd apps/web-dashboard && npm run deploy:cloudflare
+```
+
+Either path produces:
 
 ```
-https://hman.tailor.au          → front door (Cloudflare Pages)
-https://hman.tailor.au/app      → member app
-https://bridge.tailor.au        → your desktop bridge (over tunnel)
-~/.hman/                         → encrypted voice reference, audit log
+https://hman.<your-domain>          → front door
+https://hman.<your-domain>/app      → member app
+https://bridge.<your-domain>        → your desktop bridge via reverse tunnel
+~/.hman/                             → encrypted voice reference, audit log
 ```
 
-No cloud model inference. No open ports. Your hardware, your keys, your
-consent on every action.
+No cloud model inference. No open inbound ports. Your hardware, your keys,
+your consent on every action.
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the full runbook (security posture,
+DNS records, secret rotation, teardown, honest gaps).
 
 ---
 

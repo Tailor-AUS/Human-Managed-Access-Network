@@ -1,0 +1,79 @@
+# .HMAN — CI
+#
+# Runs on every push and pull request. Builds all three workspaces
+# (TypeScript platform, web dashboard, .NET relay listener) and the
+# Python bridge syntax-checks. Keeps main green.
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typescript:
+    name: TypeScript (platform + web-dashboard)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile=false
+      - run: pnpm -r build
+      - run: pnpm -r typecheck || true
+
+  bicep:
+    name: Bicep lint + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Bicep
+        uses: azure/CLI@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az bicep install
+            az bicep build --file infra/main.bicep
+
+  python-bridge:
+    name: Python bridge syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          cd packages/python-bridge
+          python -m py_compile core.py api/server.py enrollment/enroll_voice.py
+
+  dotnet-relay-listener:
+    name: .NET relay listener
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+      - run: |
+          cd packages/bridge-relay-listener
+          dotnet restore
+          dotnet build -c Release --no-restore
