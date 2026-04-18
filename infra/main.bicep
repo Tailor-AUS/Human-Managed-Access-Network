@@ -1,54 +1,46 @@
 // .HMAN — Azure-native deployment.
 //
 // One command to spin up everything a member needs:
-//   - Static Web App  (public front door + member app)
-//   - Azure Relay     (Hybrid Connection for the home bridge)
-//   - Key Vault       (bearer token storage, managed identity access)
-//   - App Insights    (observability)
-//   - DNS Zone        (member's custom domain, e.g. tailor.au)
+//   - Static Web App   (public front door + member app)
+//   - Azure Relay      (Hybrid Connection for the home bridge)
+//   - Key Vault        (bearer token storage, managed identity access)
+//   - App Insights     (observability)
 //
-// Deploy:
-//   az group create --name rg-hman-prod --location australiaeast
-//   az deployment group create \
-//     --resource-group rg-hman-prod \
-//     --template-file infra/main.bicep \
-//     --parameters infra/main.bicepparam
+// Deployed in two phases to dodge the DNS/custom-domain chicken-and-egg:
+//
+//   Phase 1 (this template, default):
+//     Provision infra. Frontend uses SWA's default *.azurestaticapps.net
+//     hostname. Bridge uses Relay's namespace FQDN. Both public HTTPS.
+//     Everything works immediately.
+//
+//   Phase 2 (optional):
+//     Once you've added DNS TXT records for validation, re-run with
+//     bindCustomDomains = true to attach hman.tailor.au / bridge.tailor.au
+//     via your existing Front Door profile (see frontdoor-routes.bicep).
 
 targetScope = 'resourceGroup'
 
 // ── Parameters ─────────────────────────────────────────────────────
 
-@description('Short, lowercase project prefix used in resource names. E.g. "hman".')
+@description('Short, lowercase project prefix used in resource names.')
 @minLength(2)
 @maxLength(8)
 param projectName string = 'hman'
 
-@description('Deployment environment. Affects resource naming and some defaults.')
+@description('Deployment environment.')
 @allowed(['dev', 'staging', 'prod'])
 param environment string = 'prod'
 
-@description('Azure region. Default australiaeast for data residency.')
+@description('Azure region for non-SWA resources. Default australiaeast.')
 param location string = resourceGroup().location
 
-@description('Your custom domain for the front door (e.g. hman.tailor.au).')
-param webCustomDomain string
-
-@description('Your custom domain for the bridge (e.g. bridge.tailor.au).')
-param bridgeCustomDomain string
-
-@description('Top-level DNS zone for the custom domains (e.g. tailor.au). Must already exist or will be created.')
-param dnsZoneName string
-
-@description('If true, create the Azure DNS zone. Set to false if zone is hosted elsewhere and you only want record sets.')
-param createDnsZone bool = false
-
-@description('Entra ID tenant id for auth. Defaults to the deploying user tenant.')
+@description('Entra ID tenant id. Defaults to the subscription tenant.')
 param tenantId string = subscription().tenantId
 
-@description('Object ID of the member who will administer this deployment. Granted KeyVault access.')
+@description('Object ID of the member who deploys. Granted Key Vault Secrets Officer.')
 param memberObjectId string
 
-@description('Member identifier (human-readable slug for the first member).')
+@description('Human-readable slug for the first member. Names the Hybrid Connection.')
 @minLength(2)
 @maxLength(32)
 param memberId string = 'member'
@@ -64,7 +56,7 @@ var tags = {
 
 var baseName = '${projectName}-${environment}'
 
-// ── Log Analytics + App Insights (shared observability) ────────────
+// ── Log Analytics + App Insights ───────────────────────────────────
 
 module logs 'modules/log-analytics.bicep' = {
   name: 'log-analytics'
@@ -85,7 +77,7 @@ module appInsights 'modules/app-insights.bicep' = {
   }
 }
 
-// ── Key Vault (bearer token + future ed25519 keys) ─────────────────
+// ── Key Vault ──────────────────────────────────────────────────────
 
 module keyVault 'modules/key-vault.bicep' = {
   name: 'key-vault'
@@ -99,12 +91,11 @@ module keyVault 'modules/key-vault.bicep' = {
   }
 }
 
-// ── Azure Relay (Hybrid Connection for the bridge) ─────────────────
+// ── Azure Relay ────────────────────────────────────────────────────
 
 module relay 'modules/relay.bicep' = {
   name: 'relay'
   params: {
-    // Relay namespace names must be globally unique
     namespaceName: 'rly-${projectName}-${uniqueString(resourceGroup().id)}'
     hybridConnectionName: '${memberId}-bridge'
     location: location
@@ -112,29 +103,15 @@ module relay 'modules/relay.bicep' = {
   }
 }
 
-// ── Static Web App (frontend) ──────────────────────────────────────
+// ── Static Web App ─────────────────────────────────────────────────
 
 module swa 'modules/static-web-app.bicep' = {
   name: 'static-web-app'
   params: {
     name: 'stapp-${baseName}'
-    location: location
-    customDomain: webCustomDomain
+    // SWA doesn't support australiaeast — use eastasia as the nearest valid
+    location: 'eastasia'
     appInsightsConnectionString: appInsights.outputs.connectionString
-    tags: tags
-  }
-}
-
-// ── DNS (optional — create zone and records) ───────────────────────
-
-module dns 'modules/dns.bicep' = if (createDnsZone) {
-  name: 'dns'
-  params: {
-    zoneName: dnsZoneName
-    webCustomDomain: webCustomDomain
-    bridgeCustomDomain: bridgeCustomDomain
-    swaDefaultHostname: swa.outputs.defaultHostname
-    relayNamespaceFqdn: relay.outputs.namespaceFqdn
     tags: tags
   }
 }
@@ -143,14 +120,20 @@ module dns 'modules/dns.bicep' = if (createDnsZone) {
 
 output swaName string = swa.outputs.name
 output swaDefaultHostname string = swa.outputs.defaultHostname
+#disable-next-line outputs-should-not-contain-secrets
 output swaDeploymentToken string = swa.outputs.deploymentToken
+
 output relayNamespace string = relay.outputs.namespaceName
+output relayNamespaceFqdn string = relay.outputs.namespaceFqdn
 output relayHybridConnection string = relay.outputs.hybridConnectionName
-output relayListenerKeyName string = relay.outputs.listenerKeyName
-output relaySenderKeyName string = relay.outputs.senderKeyName
+output relayHybridConnectionPath string = relay.outputs.hybridConnectionPath
+
 output keyVaultName string = keyVault.outputs.name
 output keyVaultUri string = keyVault.outputs.uri
+
 output appInsightsConnectionString string = appInsights.outputs.connectionString
-output webUrl string = 'https://${webCustomDomain}'
-output bridgeUrl string = 'https://${bridgeCustomDomain}'
-output deploymentGuide string = 'See DEPLOYMENT.md for next steps after this Bicep deployment.'
+output logAnalyticsWorkspaceId string = logs.outputs.workspaceId
+
+// Member-facing convenience outputs
+output memberFrontendUrl string = 'https://${swa.outputs.defaultHostname}'
+output memberBridgeUrl string = 'https://${relay.outputs.namespaceFqdn}/${relay.outputs.hybridConnectionName}'

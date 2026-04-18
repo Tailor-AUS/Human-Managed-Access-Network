@@ -1,5 +1,5 @@
 // Parameter file for main.bicep.
-// Edit the values below for your deployment.
+// Phase 1: provisions SWA + Relay + KV + App Insights. No DNS work.
 //
 // Use:
 //   az deployment group create \
@@ -12,21 +12,11 @@ using 'main.bicep'
 param projectName = 'hman'
 param environment = 'prod'
 
-// ── Your custom domain ────────────────────────────────────────────
-// Change these to match the domain you own. DNS zone must exist
-// either in Azure DNS (set createDnsZone = true) or elsewhere (set
-// createDnsZone = false and add records yourself).
-param webCustomDomain = 'hman.tailor.au'
-param bridgeCustomDomain = 'bridge.tailor.au'
-param dnsZoneName = 'tailor.au'
-param createDnsZone = false
-
-// ── Identity ──────────────────────────────────────────────────────
 // Your Entra ID object id. Get it with:
 //   az ad signed-in-user show --query id -o tsv
-// Leave tenantId empty to use the current subscription's tenant.
+// Populated by azure-deploy.ps1 at runtime — set here if running bicep directly.
 param memberObjectId = ''
 
 // Human-friendly identifier for the first member on this deployment.
-// Used to name the Hybrid Connection (e.g. "knox-bridge").
+// Becomes the Hybrid Connection name, e.g. "member-bridge".
 param memberId = 'member'

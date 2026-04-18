@@ -36,8 +36,12 @@ resource hc 'Microsoft.Relay/namespaces/hybridConnections@2024-01-01' = {
   parent: ns
   name: hybridConnectionName
   properties: {
-    requiresClientAuthorization: true
-    userMetadata: 'HMAN bridge hybrid connection — home desktop listens, web frontend sends.'
+    // Relay itself is anonymous-accessible. Authentication is enforced at
+    // the Python bridge (bearer-token middleware). This lets browsers call
+    // the Relay HTTP endpoint directly without a SAS token — which would
+    // otherwise have to be embedded client-side.
+    requiresClientAuthorization: false
+    userMetadata: 'HMAN bridge hybrid connection — anonymous, bearer-token auth at origin.'
   }
 }
 
