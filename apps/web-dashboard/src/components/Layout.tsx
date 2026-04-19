@@ -1,26 +1,19 @@
 import { Outlet, NavLink } from 'react-router-dom'
 import {
-  LayoutDashboard,
-  Archive,
-  Bell,
-  Shield,
-  Users,
+  Power,
+  Folder,
   Settings,
   Menu,
   X,
   Mic,
-  ShieldCheck,
+  Shield,
 } from 'lucide-react'
 import { useState } from 'react'
 
 const navItems = [
-  { path: '/app', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { path: '/app', label: 'Subconscious', icon: Power, end: true },
   { path: '/app/onboarding', label: 'Onboarding', icon: Mic },
-  { path: '/app/gates', label: 'Gates', icon: ShieldCheck },
-  { path: '/app/vaults', label: 'Vaults', icon: Archive },
-  { path: '/app/requests', label: 'Requests', icon: Bell, badge: 2 },
-  { path: '/app/audit', label: 'Audit Log', icon: Shield },
-  { path: '/app/delegations', label: 'Delegations', icon: Users },
+  { path: '/app/memory', label: 'Memory', icon: Folder },
   { path: '/app/settings', label: 'Settings', icon: Settings },
 ]
 
@@ -73,11 +66,6 @@ export function Layout() {
             >
               <item.icon className="h-5 w-5" />
               {item.label}
-              {item.badge && (
-                <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-level-gated px-1.5 text-xs font-bold text-black">
-                  {item.badge}
-                </span>
-              )}
             </NavLink>
           ))}
         </nav>

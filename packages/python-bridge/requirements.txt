@@ -10,10 +10,18 @@ python-multipart>=0.0.9
 sounddevice>=0.4.6
 soundfile>=0.12.1
 librosa>=0.10
+av>=11.0              # PyAV — decodes webm/opus audio from browser MediaRecorder
 
 # Voice biometrics
 resemblyzer>=0.1.4
 torch>=2.0            # CUDA build recommended; CPU fallback works
+
+# Ambient memory (the subconscious) — 30s chunks → transcript → JSONL
+openai-whisper>=20231117
+
+# Sensor support
+psutil>=5.9          # active-window process name lookup (screen sensor)
+bleak>=0.22          # BLE for Muse S Athena (eeg sensor, future)
 
 # Cryptography
 cryptography>=42.0

@@ -168,4 +168,68 @@ export const hman = {
       await fetch(`${BASE}/api/gate5/lock`, { method: 'POST', headers: authHeaders() }),
     )
   },
+
+  // Sensors — unified API for every capture stream (audio, keystrokes, screen, eeg)
+  async sensors(): Promise<SensorStatus[]> {
+    return j(await fetch(`${BASE}/api/sensors`, { headers: authHeaders() }))
+  },
+
+  async sensorStart(name: string): Promise<SensorStatus> {
+    return j(
+      await fetch(`${BASE}/api/sensors/${name}/start`, {
+        method: 'POST',
+        headers: authHeaders(),
+      }),
+    )
+  },
+
+  async sensorStop(name: string): Promise<SensorStatus> {
+    return j(
+      await fetch(`${BASE}/api/sensors/${name}/stop`, {
+        method: 'POST',
+        headers: authHeaders(),
+      }),
+    )
+  },
+
+  async sensorRecent(name: string, seconds = 3600): Promise<SensorEntry[]> {
+    return j(
+      await fetch(`${BASE}/api/sensors/${name}/recent?seconds=${seconds}`, {
+        headers: authHeaders(),
+      }),
+    )
+  },
+
+  async sensorsStartAll(): Promise<SensorStatus[]> {
+    return j(
+      await fetch(`${BASE}/api/sensors/start_all`, {
+        method: 'POST',
+        headers: authHeaders(),
+      }),
+    )
+  },
+
+  async sensorsStopAll(): Promise<SensorStatus[]> {
+    return j(
+      await fetch(`${BASE}/api/sensors/stop_all`, {
+        method: 'POST',
+        headers: authHeaders(),
+      }),
+    )
+  },
+}
+
+export interface SensorStatus {
+  name: string
+  available: boolean
+  running: boolean
+  started_at: string | null
+  last_ts: string | null
+  last_error: string | null
+  summary: Record<string, unknown>
+}
+
+export type SensorEntry = {
+  ts: string
+  [key: string]: unknown
 }

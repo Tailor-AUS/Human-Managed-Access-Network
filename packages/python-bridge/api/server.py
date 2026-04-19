@@ -27,8 +27,10 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
+import traceback
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 # Make sibling module importable when run as script (api/server.py → ../core.py)
@@ -63,24 +65,82 @@ _AUTH_TOKEN = os.environ.get("HMAN_AUTH_TOKEN", "").strip() or None
 _PUBLIC_PATHS = {"/", "/openapi.json", "/docs", "/redoc", "/docs/oauth2-redirect"}
 
 
+def _cors_headers_for(origin: str | None) -> dict[str, str]:
+    """Return the CORS response headers browsers need to see on rejected
+    responses. Starlette's CORSMiddleware wraps successful responses, but
+    when we short-circuit with a JSONResponse here, the wrapping is skipped.
+    We add the headers manually so 401/403 responses are CORS-compliant."""
+    if not origin:
+        return {}
+    # Match against the configured allow-list; wildcard-prefix matches ('https://*.foo')
+    def allowed(candidate: str) -> bool:
+        if candidate == "*":
+            return True
+        if candidate.startswith("https://*."):
+            suffix = candidate[len("https://*."):]
+            return origin.startswith("https://") and origin.endswith("." + suffix)
+        return candidate == origin
+
+    if any(allowed(o) for o in _allowed_origins):
+        return {
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+            "Vary": "Origin",
+        }
+    return {}
+
+
+# Catch-all exception handler so uncaught errors get CORS headers too.
+# Without this, Starlette's ServerErrorMiddleware (outermost, above
+# CORSMiddleware) produces a 500 response that the browser sees as a
+# CORS failure ("No 'Access-Control-Allow-Origin' header is present"),
+# hiding the real error.
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    # Log so ops/run-relay-listener.ps1 output shows the stack trace.
+    print(f"[unhandled] {request.method} {request.url.path}: {type(exc).__name__}: {exc}")
+    traceback.print_exc()
+    origin = request.headers.get("origin")
+    cors_headers = _cors_headers_for(origin)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": f"internal error: {type(exc).__name__}: {str(exc)[:300]}",
+        },
+        headers=cors_headers,
+    )
+
+
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
-    from fastapi.responses import JSONResponse
     # No token configured → dev mode, everything open
     if _AUTH_TOKEN is None:
         return await call_next(request)
+    # (JSONResponse imported at module top)
     # Public paths (docs, schema) stay open
     if request.url.path in _PUBLIC_PATHS or not request.url.path.startswith("/api/"):
         return await call_next(request)
     # Preflight CORS must not be gated — browser never attaches auth to OPTIONS
     if request.method == "OPTIONS":
         return await call_next(request)
+
+    origin = request.headers.get("origin")
+    cors_headers = _cors_headers_for(origin)
+
     header = request.headers.get("authorization", "")
     if not header.startswith("Bearer "):
-        return JSONResponse(status_code=401, content={"detail": "missing bearer token"})
+        return JSONResponse(
+            status_code=401,
+            content={"detail": "missing bearer token"},
+            headers=cors_headers,
+        )
     submitted = header[len("Bearer "):].strip()
     if not secrets.compare_digest(submitted, _AUTH_TOKEN):
-        return JSONResponse(status_code=401, content={"detail": "invalid bearer token"})
+        return JSONResponse(
+            status_code=401,
+            content={"detail": "invalid bearer token"},
+            headers=cors_headers,
+        )
     return await call_next(request)
 
 # ── In-memory session store (single-user, single-process is fine for local) ──
@@ -563,6 +623,71 @@ def gates():
         last_activation=_gate5_last_activation,
         rejections_last_hour=_gate5_rejects,  # simplified; real rolling-hour later
     )
+
+
+# ── Sensors (the subconscious) ──────────────────────────────────────
+#
+# Unified sensor API: every sensor (audio, keystrokes, screen, eeg)
+# exposes the same shape — /status, /start, /stop, /recent. The
+# subconscious page in the dashboard drives these.
+
+import sensors as _sensors  # noqa: E402
+
+
+@app.get("/api/sensors")
+async def sensors_list():
+    """List every sensor and its current status (for the Subconscious page)."""
+    return [s.status() for s in _sensors.all_sensors()]
+
+
+@app.get("/api/sensors/{name}/status")
+async def sensor_status(name: str):
+    s = _sensors.get(name)
+    if s is None:
+        raise HTTPException(status_code=404, detail=f"unknown sensor: {name}")
+    return s.status()
+
+
+@app.post("/api/sensors/{name}/start")
+async def sensor_start(name: str):
+    s = _sensors.get(name)
+    if s is None:
+        raise HTTPException(status_code=404, detail=f"unknown sensor: {name}")
+    s.start()
+    return s.status()
+
+
+@app.post("/api/sensors/{name}/stop")
+async def sensor_stop(name: str):
+    s = _sensors.get(name)
+    if s is None:
+        raise HTTPException(status_code=404, detail=f"unknown sensor: {name}")
+    s.stop()
+    return s.status()
+
+
+@app.get("/api/sensors/{name}/recent")
+async def sensor_recent(name: str, seconds: int = 3600):
+    s = _sensors.get(name)
+    if s is None:
+        raise HTTPException(status_code=404, detail=f"unknown sensor: {name}")
+    return s.recent(seconds=seconds)
+
+
+@app.post("/api/sensors/start_all")
+async def sensors_start_all():
+    """Turn on every available sensor."""
+    for s in _sensors.all_sensors():
+        if s.available():
+            s.start()
+    return [s.status() for s in _sensors.all_sensors()]
+
+
+@app.post("/api/sensors/stop_all")
+async def sensors_stop_all():
+    for s in _sensors.all_sensors():
+        s.stop()
+    return [s.status() for s in _sensors.all_sensors()]
 
 
 # ── Dev entrypoint ──────────────────────────────────────────────────

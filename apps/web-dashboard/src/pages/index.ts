@@ -1,6 +1,8 @@
 export { WelcomePage } from './WelcomePage'
 export { DashboardPage } from './DashboardPage'
+export { SubconsciousPage } from './SubconsciousPage'
 export { OnboardingPage } from './OnboardingPage'
+export { MemoryPage } from './MemoryPage'
 export { GatesPage } from './GatesPage'
 export { VaultsPage } from './VaultsPage'
 export { RequestsPage } from './RequestsPage'

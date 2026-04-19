@@ -3,13 +3,9 @@ import { Layout } from './components/Layout'
 import { TokenGate } from './components/TokenGate'
 import {
   WelcomePage,
-  DashboardPage,
+  SubconsciousPage,
   OnboardingPage,
-  GatesPage,
-  VaultsPage,
-  RequestsPage,
-  AuditPage,
-  DelegationsPage,
+  MemoryPage,
   SettingsPage,
 } from './pages'
 
@@ -32,20 +28,24 @@ function App() {
 
       {/* Member app — under /app, with chrome + bridge auth gate */}
       <Route path="/app" element={<GatedLayout />}>
-        <Route index element={<DashboardPage />} />
+        <Route index element={<SubconsciousPage />} />
         <Route path="onboarding" element={<OnboardingPage />} />
-        <Route path="gates" element={<GatesPage />} />
-        <Route path="vaults" element={<VaultsPage />} />
-        <Route path="requests" element={<RequestsPage />} />
-        <Route path="audit" element={<AuditPage />} />
-        <Route path="delegations" element={<DelegationsPage />} />
+        <Route path="memory" element={<MemoryPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        {/* Governance routes (gates/vaults/requests/audit/delegations) are
+            intentionally removed from nav until they have real backing data.
+            Re-import from ./pages and re-add when re-enabling. */}
       </Route>
 
       {/* Legacy shortcuts — redirect to the new /app/ paths */}
       <Route path="/onboarding" element={<Navigate to="/app/onboarding" replace />} />
-      <Route path="/gates" element={<Navigate to="/app/gates" replace />} />
       <Route path="/dashboard" element={<Navigate to="/app" replace />} />
+      <Route path="/gates" element={<Navigate to="/app" replace />} />
+      <Route path="/app/gates" element={<Navigate to="/app" replace />} />
+      <Route path="/app/vaults" element={<Navigate to="/app" replace />} />
+      <Route path="/app/requests" element={<Navigate to="/app" replace />} />
+      <Route path="/app/audit" element={<Navigate to="/app" replace />} />
+      <Route path="/app/delegations" element={<Navigate to="/app" replace />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

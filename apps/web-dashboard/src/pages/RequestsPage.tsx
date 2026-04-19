@@ -57,68 +57,9 @@ function ErrorDisplay({
   )
 }
 
-// Mock data fetcher
 async function fetchRequests(): Promise<AccessRequest[]> {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 400))
-
-  return [
-  {
-    id: '1',
-    requesterName: 'Claude',
-    requesterType: 'ai_model',
-    resourceUri: 'hman://finance/transactions',
-    resourceName: 'Finance / Transactions',
-    purpose: 'Analyze your spending patterns to provide personalized budget recommendations',
-    timestamp: new Date(Date.now() - 5 * 60 * 1000),
-    expiresAt: new Date(Date.now() + 5 * 60 * 1000),
-    status: 'pending',
-  },
-  {
-    id: '2',
-    requesterName: 'Energy Australia Bot',
-    requesterType: 'bot',
-    resourceUri: 'hman://identity/address',
-    resourceName: 'Identity / Address',
-    purpose: 'Verify your service address for account update',
-    timestamp: new Date(Date.now() - 10 * 60 * 1000),
-    expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-    status: 'pending',
-  },
-  {
-    id: '3',
-    requesterName: 'GPT-4',
-    requesterType: 'ai_model',
-    resourceUri: 'hman://diary/entries',
-    resourceName: 'Diary / Recent Entries',
-    purpose: 'Read recent journal entries for mood analysis',
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    expiresAt: new Date(Date.now() - 30 * 60 * 1000),
-    status: 'expired',
-  },
-  {
-    id: '4',
-    requesterName: 'Sarah Johnson',
-    requesterType: 'delegate',
-    resourceUri: 'hman://finance/tax-2024',
-    resourceName: 'Finance / Tax Records 2024',
-    purpose: 'Review tax documents on your behalf',
-    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
-    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    status: 'approved',
-  },
-  {
-    id: '5',
-    requesterName: 'Unknown Scraper',
-    requesterType: 'bot',
-    resourceUri: 'hman://health/records',
-    resourceName: 'Health / Medical Records',
-    purpose: 'Access medical records',
-    timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
-    expiresAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    status: 'denied',
-  },
-  ]
+  // TODO: wire to /api/requests on the bridge once that endpoint exists.
+  return []
 }
 
 type FilterStatus = 'all' | 'pending' | 'approved' | 'denied' | 'expired'
