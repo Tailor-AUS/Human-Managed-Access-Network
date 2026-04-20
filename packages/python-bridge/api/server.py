@@ -207,11 +207,19 @@ class GatesResponse(BaseModel):
 
 @app.get("/api/health", response_model=HealthResponse)
 def health():
-    import torch
+    # torch import can fail with DLL errors on Windows if the install is
+    # mismatched against the local CUDA runtime — degrade to gpu=False
+    # rather than crash the health probe.
+    gpu = False
+    try:
+        import torch
+        gpu = torch.cuda.is_available()
+    except Exception:
+        gpu = False
     return HealthResponse(
         ok=True,
         version="0.1.0",
-        gpu=torch.cuda.is_available(),
+        gpu=gpu,
         enrolled=core.has_enrollment(),
     )
 
