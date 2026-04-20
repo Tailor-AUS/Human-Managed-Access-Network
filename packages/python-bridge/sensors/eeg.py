@@ -85,9 +85,10 @@ class EEGSensor(Sensor):
         self.connected = False
         self.packet_count = 0
         self._last_packet_ts = 0.0
-        self._recent_pkts: deque[float] = deque(maxlen=256)  # timestamps of last N packets
-        self._sample_buffer: deque[float] = deque(maxlen=SAMPLE_RATE_HZ * 10)  # 10s rolling buffer
+        self._recent_pkts: deque[float] = deque(maxlen=256)
+        self._sample_buffer: deque[float] = deque(maxlen=SAMPLE_RATE_HZ * 10)
         self._loop_task: Optional[asyncio.Task] = None
+        self._control_log: list[str] = []
 
     def available(self) -> bool:
         try:
@@ -122,6 +123,7 @@ class EEGSensor(Sensor):
             "packet_rate_hz": pkt_rate,
             "last_packet_age_s": last_age,
             "signal_amp_uv": round(amp, 1),
+            "control_log": self._control_log[-5:],
         }
 
     # ── start/stop override: spin up our own asyncio loop in the thread ──
@@ -162,6 +164,23 @@ class EEGSensor(Sensor):
             self.connected = True
             self.last_error = None
 
+            # Enumerate services so we can see which UUIDs the firmware
+            # actually exposes. Muse firmware revisions vary widely.
+            try:
+                services = client.services
+                discovered: list[str] = []
+                for service in services:
+                    for ch in service.characteristics:
+                        props = ",".join(ch.properties)
+                        discovered.append(f"{ch.uuid} [{props}]")
+                if discovered:
+                    print(f"[eeg enumerate] {len(discovered)} chars: " + "; ".join(discovered[:10]))
+                    # Stash top few in control log for dashboard visibility
+                    for line in discovered[:10]:
+                        self._control_log.append(f"char: {line}")
+            except Exception as e:
+                print(f"[eeg enumerate] failed: {e}")
+
             # Reading the device name first seems to "wake" the Muse before
             # notifications can flow — mirrors muse-brain/stream_v2.py.
             try:
@@ -178,10 +197,24 @@ class EEGSensor(Sensor):
                 if samples:
                     self._sample_buffer.extend(samples)
 
-            def on_control(_sender, _data):  # noqa: ANN001
-                # Keep the control subscription alive — device firmware
-                # expects a listener on the control channel.
-                pass
+            # Log control responses so we can see what the device says when we
+            # send handshake commands or presets. Rolls into self.last_error
+            # for visibility in the dashboard.
+            self._control_log: list[str] = []
+
+            def on_control(_sender, data):  # noqa: ANN001
+                try:
+                    raw = bytes(data)
+                    # Muse control replies are length-prefixed ASCII JSON or
+                    # plain text. Try to decode as utf-8.
+                    txt = raw.decode("utf-8", errors="replace").strip()
+                    if txt:
+                        self._control_log.append(txt[:200])
+                        if len(self._control_log) > 20:
+                            self._control_log.pop(0)
+                        print(f"[eeg control] {txt[:200]}")
+                except Exception:
+                    pass
 
             await client.start_notify(CONTROL_UUID, on_control)
             await client.start_notify(DATA1_UUID, on_data)
