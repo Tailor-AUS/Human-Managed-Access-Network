@@ -31,13 +31,20 @@ RETRY_BACKOFF_S = 5.0
 
 # Preset commands — try in order until packets start flowing.
 # Knox's muse-brain script found p21 works for Athena; keep fallbacks.
+# Preset commands — order matches muse-brain/stream_v2.py's proven sequence.
+# p21 worked for Knox's Athena; rest are fallbacks across firmware revisions.
 PRESETS = [
     bytearray([0x04, 0x70, 0x32, 0x31, 0x0a]),  # p21
     bytearray([0x04, 0x70, 0x32, 0x30, 0x0a]),  # p20
+    bytearray([0x04, 0x70, 0x32, 0x32, 0x0a]),  # p22
     bytearray([0x04, 0x70, 0x32, 0x33, 0x0a]),  # p23
+    bytearray([0x02, 0x73, 0x0a]),              # 's' (start)
     bytearray([0x04, 0x70, 0x35, 0x30, 0x0a]),  # p50
+    bytearray([0x04, 0x70, 0x35, 0x31, 0x0a]),  # p51
 ]
-HALT_CMD = bytearray([0x02, 0x68, 0x0a])
+VERSION_CMD = bytearray([0x02, 0x76, 0x0a])   # 'v' — wakes device
+DEVICE_INFO_CMD = bytearray([0x02, 0x64, 0x0a])  # 'd'
+HALT_CMD = bytearray([0x02, 0x68, 0x0a])      # 'h'
 
 
 def _decode_muse_packet(data: bytes) -> tuple[Optional[int], list[float]]:
@@ -155,6 +162,13 @@ class EEGSensor(Sensor):
             self.connected = True
             self.last_error = None
 
+            # Reading the device name first seems to "wake" the Muse before
+            # notifications can flow — mirrors muse-brain/stream_v2.py.
+            try:
+                await client.read_gatt_char("00002a00-0000-1000-8000-00805f9b34fb")
+            except Exception:
+                pass
+
             def on_data(sender, data):  # bleak callback, sync
                 self.packet_count += 1
                 now = time.time()
@@ -164,28 +178,49 @@ class EEGSensor(Sensor):
                 if samples:
                     self._sample_buffer.extend(samples)
 
+            def on_control(_sender, _data):  # noqa: ANN001
+                # Keep the control subscription alive — device firmware
+                # expects a listener on the control channel.
+                pass
+
+            await client.start_notify(CONTROL_UUID, on_control)
             await client.start_notify(DATA1_UUID, on_data)
             await client.start_notify(DATA3_UUID, on_data)
 
-            # Wake up the device
+            # Wake sequence
             try:
-                await client.write_gatt_char(CONTROL_UUID, bytearray([0x02, 0x76, 0x0a]))  # version
-                await asyncio.sleep(0.3)
-            except Exception:
-                pass
+                await client.write_gatt_char(CONTROL_UUID, VERSION_CMD)
+                await asyncio.sleep(0.5)
+                await client.write_gatt_char(CONTROL_UUID, DEVICE_INFO_CMD)
+                await asyncio.sleep(0.5)
+            except Exception as e:
+                self.last_error = f"wake failed: {e}"
 
-            # Try presets until packets flow
+            # Try presets. Each gets 2s to start streaming — short presets
+            # sometimes take a moment before data arrives.
             pre_count = self.packet_count
             for preset in PRESETS:
                 if not self.running:
                     break
                 try:
                     await client.write_gatt_char(CONTROL_UUID, preset)
-                except Exception:
+                except Exception as e:
+                    self.last_error = f"preset write failed: {e}"
                     continue
-                await asyncio.sleep(1.2)
+                # Poll for packets every 250ms up to 2s
+                for _ in range(8):
+                    await asyncio.sleep(0.25)
+                    if self.packet_count > pre_count:
+                        break
                 if self.packet_count > pre_count:
+                    self.last_error = None
                     break
+            if self.packet_count == pre_count:
+                self.last_error = (
+                    "handshake complete but no data packets — "
+                    "Muse may be paired to another app (Muse app, Mind Monitor). "
+                    "Close other clients and Start again."
+                )
 
             # Stream loop: periodically flush a summary row, watch for stop
             last_flush = time.time()
@@ -211,7 +246,7 @@ class EEGSensor(Sensor):
                 await client.write_gatt_char(CONTROL_UUID, HALT_CMD)
             except Exception:
                 pass
-            for uuid in (DATA1_UUID, DATA3_UUID):
+            for uuid in (CONTROL_UUID, DATA1_UUID, DATA3_UUID):
                 try:
                     await client.stop_notify(uuid)
                 except Exception:

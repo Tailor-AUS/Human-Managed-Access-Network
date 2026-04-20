@@ -134,9 +134,27 @@ function LiveChips({ sensor }: { sensor: SensorStatus }) {
       if (Boolean(s.on_break)) chips.push(<Chip key="b" tone="amber">on break</Chip>)
       break
     }
-    case 'eeg':
-      chips.push(<Chip key="n" tone="gray">streamer not wired yet</Chip>)
+    case 'eeg': {
+      const connected = Boolean(s.connected)
+      const rate = (s.packet_rate_hz as number) ?? 0
+      const amp = (s.signal_amp_uv as number) ?? 0
+      const age = s.last_packet_age_s as number | null
+      chips.push(
+        <Chip key="c" tone={connected ? 'green' : 'gray'}>
+          {connected ? 'connected' : 'searching'}
+        </Chip>,
+      )
+      if (connected) {
+        chips.push(<Chip key="r">{rate} pkt/s</Chip>)
+        if (amp > 0) chips.push(<Chip key="a">±{amp.toFixed(0)} µV</Chip>)
+        if (age !== null && age !== undefined && age > 2) {
+          chips.push(<Chip key="l" tone="amber">no data {age}s</Chip>)
+        }
+      } else {
+        chips.push(<Chip key="addr" tone="gray">{String(s.address ?? 'no device')}</Chip>)
+      }
       break
+    }
   }
 
   return <div className="flex flex-wrap items-center gap-1.5">{chips}</div>
