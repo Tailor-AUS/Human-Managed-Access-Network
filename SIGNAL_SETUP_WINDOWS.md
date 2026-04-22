@@ -120,7 +120,7 @@ signal-cli -u +YOUR_PHONE_NUMBER send -m "HMAN is connected!" +YOUR_PHONE_NUMBER
 ### Run HMAN Signal Setup CLI
 
 ```powershell
-cd c:\Users\knoxh\HMAN\Human-Managed-Access-Network
+cd path\to\Human-Managed-Access-Network
 pnpm --filter @hman/demo-cli signal
 ```
 

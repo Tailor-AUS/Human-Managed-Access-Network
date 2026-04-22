@@ -23,10 +23,12 @@ Thumbs.db
 .env.local
 .env.*.local
 
-# Logs
+# Logs + local daemon output (may contain member PII — phone numbers, local paths)
 *.log
 npm-debug.log*
 pnpm-debug.log*
+daemon_output.txt
+daemon_error.txt
 
 # Test coverage
 coverage/

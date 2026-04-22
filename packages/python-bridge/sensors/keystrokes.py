@@ -2,7 +2,7 @@
 
 Writes one row every FLUSH_SECONDS summarising the window: wpm, keys,
 typos, dictation-state, and the set of recent words. Never captures
-what Knox is actually typing — just typing *rhythm* and *lexicon*
+what the member is actually typing — just typing *rhythm* and *lexicon*
 (space-separated word tokens, no punctuation, no passwords — we skip
 when an input field is detected by the active app, future work).
 """

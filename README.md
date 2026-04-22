@@ -100,9 +100,9 @@ Two supported paths — pick based on your infrastructure:
 ```powershell
 pwsh -File ops/azure-deploy.ps1 `
   -ResourceGroup rg-hman-prod `
-  -WebDomain hman.tailor.au `
-  -BridgeDomain bridge.tailor.au `
-  -DnsZone tailor.au
+  -WebDomain hman.example.com `
+  -BridgeDomain bridge.example.com `
+  -DnsZone example.com
 ```
 
 **Cloudflare (community, Pages + Tunnel)**

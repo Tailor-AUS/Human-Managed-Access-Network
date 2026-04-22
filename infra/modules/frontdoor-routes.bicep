@@ -1,4 +1,4 @@
-// Phase 2 — attach hman.tailor.au + bridge.tailor.au to an existing
+// Phase 2 — attach hman.example.com + bridge.example.com to an existing
 // Azure Front Door profile. Run AFTER:
 //   1. Phase 1 (main.bicep) has provisioned SWA + Relay
 //   2. DNS TXT records for _dnsauth.<hostname> are in place at your DNS
@@ -9,15 +9,15 @@
 // lives, NOT the .HMAN resource group. Deploy like:
 //
 //   az deployment group create \
-//     --resource-group rg-tailor-app-prod \
+//     --resource-group <front-door-resource-group> \
 //     --template-file infra/modules/frontdoor-routes.bicep \
-//     --parameters frontDoorProfileName=tailor-prod-afd \
-//                  frontDoorEndpointName=tailor-prod-afd-ep \
+//     --parameters frontDoorProfileName=<your-afd-profile> \
+//                  frontDoorEndpointName=<your-afd-endpoint> \
 //                  swaDefaultHostname=<from phase 1 outputs> \
 //                  relayNamespaceFqdn=<from phase 1 outputs> \
 //                  hybridConnectionName=<from phase 1 outputs> \
-//                  webCustomDomain=hman.tailor.au \
-//                  bridgeCustomDomain=bridge.tailor.au
+//                  webCustomDomain=hman.example.com \
+//                  bridgeCustomDomain=bridge.example.com
 
 targetScope = 'resourceGroup'
 
@@ -36,10 +36,10 @@ param relayNamespaceFqdn string
 @description('Hybrid Connection name (Relay path segment).')
 param hybridConnectionName string
 
-@description('Public hostname for the frontend (e.g. hman.tailor.au).')
+@description('Public hostname for the frontend (e.g. hman.example.com).')
 param webCustomDomain string
 
-@description('Public hostname for the bridge (e.g. bridge.tailor.au).')
+@description('Public hostname for the bridge (e.g. bridge.example.com).')
 param bridgeCustomDomain string
 
 // ── References to existing Front Door ──────────────────────────────
@@ -201,7 +201,7 @@ resource bridgeRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-02-01' = {
       'Http'
       'Https'
     ]
-    // Rewrite so incoming requests to bridge.tailor.au/api/xxx get
+    // Rewrite so incoming requests to bridge.example.com/api/xxx get
     // forwarded to the Relay as /<hybrid-connection>/api/xxx
     patternsToMatch: [
       '/*'

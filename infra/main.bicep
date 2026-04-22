@@ -15,7 +15,7 @@
 //
 //   Phase 2 (optional):
 //     Once you've added DNS TXT records for validation, re-run with
-//     bindCustomDomains = true to attach hman.tailor.au / bridge.tailor.au
+//     bindCustomDomains = true to attach hman.example.com / bridge.example.com
 //     via your existing Front Door profile (see frontdoor-routes.bicep).
 
 targetScope = 'resourceGroup'

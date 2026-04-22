@@ -31,9 +31,8 @@ CONNECT_TIMEOUT_S = 20.0
 RETRY_BACKOFF_S = 5.0
 
 # Preset commands — try in order until packets start flowing.
-# Knox's muse-brain script found p21 works for Athena; keep fallbacks.
-# Preset commands — order matches muse-brain/stream_v2.py's proven sequence.
-# p21 worked for Knox's Athena; rest are fallbacks across firmware revisions.
+# p21 is the known-good for Muse S Athena; the others are fallbacks
+# across firmware revisions.
 PRESETS = [
     bytearray([0x04, 0x70, 0x32, 0x31, 0x0a]),  # p21
     bytearray([0x04, 0x70, 0x32, 0x30, 0x0a]),  # p20

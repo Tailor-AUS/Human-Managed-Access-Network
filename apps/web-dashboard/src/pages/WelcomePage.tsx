@@ -415,7 +415,7 @@ function SubconsciousPreview() {
         </div>
         <div className="flex-1 text-center">
           <span className="text-xs text-text-secondary font-mono">
-            hman.tailor.au/app
+            hman.example.com/app
           </span>
         </div>
       </div>

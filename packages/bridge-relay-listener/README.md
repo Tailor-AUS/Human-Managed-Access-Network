@@ -7,7 +7,7 @@ network, no static IP required, no router configuration.
 ## How it works
 
 ```
-Browser → Azure Relay edge (bridge.tailor.au)
+Browser → Azure Relay edge (bridge.example.com)
             │  over E2E TLS, authenticated
             ▼
           HybridConnectionListener (this process, on your desktop)

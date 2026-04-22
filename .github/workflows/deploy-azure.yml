@@ -7,7 +7,7 @@
 #     --query 'properties.apiKey' -o tsv
 #
 # Optional env vars for the build (set as GitHub Actions variables):
-#   VITE_HMAN_BRIDGE   e.g. https://bridge.tailor.au
+#   VITE_HMAN_BRIDGE   e.g. https://bridge.example.com
 
 name: deploy-azure
 

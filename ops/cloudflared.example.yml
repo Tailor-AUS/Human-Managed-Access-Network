@@ -5,10 +5,10 @@
 #   cloudflared login                     # opens a browser, links your Cloudflare account
 #   cloudflared tunnel create hman-bridge # creates tunnel + credentials file
 #   # copy the tunnel ID into this file (replace <TUNNEL-UUID> below)
-#   cloudflared tunnel route dns hman-bridge bridge.tailor.au
+#   cloudflared tunnel route dns hman-bridge bridge.example.com
 #   cloudflared tunnel run hman-bridge
 #
-# After that, your bridge is reachable at https://bridge.tailor.au — HTTPS handled
+# After that, your bridge is reachable at https://bridge.example.com — HTTPS handled
 # by Cloudflare's edge, no router port forwarding, no exposed public IP.
 
 tunnel: <TUNNEL-UUID>
@@ -16,14 +16,14 @@ credentials-file: C:/Users/<your-user>/.cloudflared/<TUNNEL-UUID>.json
 
 ingress:
   # The .HMAN bridge (FastAPI on localhost:8765)
-  - hostname: bridge.tailor.au
+  - hostname: bridge.example.com
     service: http://localhost:8765
     originRequest:
       noTLSVerify: true
       connectTimeout: 30s
 
   # Optional — tunnel the dev web server too if you're not using Cloudflare Pages
-  # - hostname: hman.tailor.au
+  # - hostname: hman.example.com
   #   service: http://localhost:5173
 
   # Catch-all

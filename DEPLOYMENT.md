@@ -36,8 +36,8 @@ Everything is described in `infra/main.bicep` and its modules.
 
 | Resource | SKU | Purpose |
 |---|---|---|
-| Static Web App | Free | `hman.tailor.au` frontend, auto-HTTPS, CDN |
-| Relay namespace + Hybrid Connection | Standard | `bridge.tailor.au` tunnel to your desktop |
+| Static Web App | Free | `hman.example.com` frontend, auto-HTTPS, CDN |
+| Relay namespace + Hybrid Connection | Standard | `bridge.example.com` tunnel to your desktop |
 | Key Vault | Standard, RBAC | Bearer token storage |
 | Application Insights + Log Analytics | PerGB2018, 30-day retention | Observability |
 | Azure DNS zone (optional) | — | Records for your custom domain |
@@ -48,7 +48,7 @@ Estimated cost: **~$10 AUD/month** in `australiaeast`, dominated by the Relay na
 
 - Azure subscription (you have `TAILOR` on `australiaeast`)
 - You signed in with `az login` already
-- A domain you control (e.g. `tailor.au`). DNS zone can live in Azure DNS or elsewhere — both work.
+- A domain you control (e.g. `example.com`). DNS zone can live in Azure DNS or elsewhere — both work.
 - Node 20+, Python 3.11+, .NET 9 SDK, `az` CLI with the Bicep extension, `pnpm`
 
 Optional tooling:
@@ -60,9 +60,9 @@ Optional tooling:
 ```powershell
 pwsh -File ops/azure-deploy.ps1 `
   -ResourceGroup rg-hman-prod `
-  -WebDomain hman.tailor.au `
-  -BridgeDomain bridge.tailor.au `
-  -DnsZone tailor.au
+  -WebDomain hman.example.com `
+  -BridgeDomain bridge.example.com `
+  -DnsZone example.com
 ```
 
 That script does the full end-to-end:
@@ -72,7 +72,7 @@ That script does the full end-to-end:
 3. Runs `infra/main.bicep` — SWA, Relay, Key Vault, App Insights, DNS records
 4. Generates a 48-char `HMAN_AUTH_TOKEN`, stores it as secret `HMAN-AUTH-TOKEN` in the Key Vault
 5. Fetches the Relay listener key, writes `~/.hman/bridge.env` with everything the local bridge needs
-6. Builds the web-dashboard with `VITE_HMAN_BRIDGE=https://bridge.tailor.au`
+6. Builds the web-dashboard with `VITE_HMAN_BRIDGE=https://bridge.example.com`
 7. Deploys `dist/` to Static Web Apps via `swa deploy`
 
 If your DNS zone is outside Azure, pass `-CreateDnsZone:$false` (default) and manually add these records at your registrar after the deploy prints them:
@@ -99,7 +99,7 @@ First launch reads `~/.hman/bridge.env` (populated by the deploy script) for the
 
 ### First visit
 
-1. Open `https://hman.tailor.au/app` on any device
+1. Open `https://hman.example.com/app` on any device
 2. TokenGate asks for your bearer token — paste it
 3. Go to Onboarding → read 10 prompts to enrol your voice
 4. Go to Gates → Arm Gate 5 with your enrolment passphrase
@@ -159,12 +159,12 @@ cd ../..
 # 2. Create the Cloudflare Tunnel
 cloudflared login
 cloudflared tunnel create hman-bridge
-cloudflared tunnel route dns hman-bridge bridge.tailor.au
+cloudflared tunnel route dns hman-bridge bridge.example.com
 # Copy ops/cloudflared.example.yml to ~/.cloudflared/config.yml and fill in the UUID + credentials path.
 
 # 3. Deploy the web dashboard to Cloudflare Pages
 cd apps/web-dashboard
-copy .env.production.example .env.production    # edit → VITE_HMAN_BRIDGE=https://bridge.tailor.au
+copy .env.production.example .env.production    # edit → VITE_HMAN_BRIDGE=https://bridge.example.com
 npx wrangler login
 npx wrangler pages project create hman --production-branch main
 npm run deploy:cloudflare
@@ -173,7 +173,7 @@ npm run deploy:cloudflare
 pwsh -File ops/install-windows-service.ps1 -Tunnel cloudflare
 ```
 
-In the Cloudflare dashboard, add `hman.tailor.au` as a custom domain on the Pages project.
+In the Cloudflare dashboard, add `hman.example.com` as a custom domain on the Pages project.
 
 ---
 
@@ -181,11 +181,11 @@ In the Cloudflare dashboard, add `hman.tailor.au` as a custom domain on the Page
 
 | What | URL | Hosted on |
 |---|---|---|
-| Public front door | `https://hman.tailor.au` | Cloudflare Pages or Azure Static Web Apps |
-| Member app | `https://hman.tailor.au/app` | same as front door |
-| Bridge API | `https://bridge.tailor.au` | Cloudflare Tunnel or Azure Relay → your desktop |
+| Public front door | `https://hman.example.com` | Cloudflare Pages or Azure Static Web Apps |
+| Member app | `https://hman.example.com/app` | same as front door |
+| Bridge API | `https://bridge.example.com` | Cloudflare Tunnel or Azure Relay → your desktop |
 | Local bridge | `http://127.0.0.1:8765` | Your desktop only |
-| OpenAPI docs | `https://bridge.tailor.au/docs` | Your desktop (behind token) |
+| OpenAPI docs | `https://bridge.example.com/docs` | Your desktop (behind token) |
 
 ---
 
@@ -203,13 +203,13 @@ In the Cloudflare dashboard, add `hman.tailor.au` as a custom domain on the Page
 
 ## Why Azure vs. Cloudflare
 
-For **Knox's deployment of `.HMAN`**, Azure is correct because:
-- Same tenant as Tailor, same procurement story, same monitoring
-- Australian data residency (`australiaeast`)
-- Azure Relay doesn't terminate-and-re-encrypt TLS — your desktop's cert is preserved end-to-end
-- Entra ID available for member auth when you graduate from bearer tokens
+**Azure** is a good fit when:
+- You already have an Azure tenant and want one procurement/monitoring story
+- You need data residency in a specific Azure region
+- You want end-to-end TLS — Azure Relay doesn't terminate and re-encrypt; your desktop's cert is preserved through the hop
+- You plan to graduate from bearer tokens to Entra ID for member auth
 
-For **community forks**, Cloudflare is usually easier:
+**Cloudflare** is usually easier when:
 - No Azure subscription required
 - Free tier is more generous for hobby use
 - Cloudflare Tunnel gives a public HTTPS URL in ~2 minutes

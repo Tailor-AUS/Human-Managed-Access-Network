@@ -1,7 +1,7 @@
 // .HMAN bridge relay listener.
 //
 // Sits on the member's home desktop. Connects outbound to Azure Relay
-// Hybrid Connection (bridge.tailor.au behind the scenes). When a request
+// Hybrid Connection (bridge.example.com behind the scenes). When a request
 // arrives through the Relay, proxies it to http://127.0.0.1:8765 (the
 // local FastAPI bridge) and streams the response back.
 //

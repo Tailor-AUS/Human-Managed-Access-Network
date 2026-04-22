@@ -8,8 +8,8 @@
 #   npx wrangler login
 #   npx wrangler pages project create hman --production-branch main
 #
-# Custom domain (hman.tailor.au):
-#   # Requires tailor.au on Cloudflare. Add a CNAME for hman → <your-project>.pages.dev
+# Custom domain (hman.example.com):
+#   # Requires example.com on Cloudflare. Add a CNAME for hman → <your-project>.pages.dev
 #   # in Cloudflare Dashboard → Pages → hman → Custom domains → Set up a custom domain.
 
 name = "hman"

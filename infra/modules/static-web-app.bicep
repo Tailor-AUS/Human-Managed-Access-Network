@@ -7,10 +7,10 @@
 //   - Global CDN
 //   - Built-in auth (Entra ID, GitHub, etc.)
 //
-// This module deliberately does NOT bind a custom domain. The Tailor
-// Front Door handles public hostnames for all Tailor-umbrella services.
-// Run infra/modules/frontdoor-routes.bicep once DNS TXT validation is
-// sorted to wire hman.tailor.au through the existing tailor-prod-afd.
+// This module deliberately does NOT bind a custom domain. Route the
+// hostname via Azure Front Door (or any fronting CDN) — run
+// infra/modules/frontdoor-routes.bicep once DNS TXT validation is
+// sorted to wire hman.<your-domain> through your Front Door profile.
 
 @description('Static Web App resource name.')
 param name string
