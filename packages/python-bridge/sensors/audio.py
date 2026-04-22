@@ -138,10 +138,14 @@ class AudioSensor(Sensor):
         self._peak_rms_60s = 0.0
 
     def _transcribe(self, audio: np.ndarray) -> str:
+        # faster-whisper (CTranslate2) — no torch dependency, 3-4x faster on CPU
+        # than openai-whisper, and dodges the c10.dll load failure on this box.
         if self._whisper_model is None:
-            import whisper
-            self._whisper_model = whisper.load_model("base")
-        result = self._whisper_model.transcribe(
-            audio, language="en", fp16=False, verbose=False,
+            from faster_whisper import WhisperModel
+            self._whisper_model = WhisperModel(
+                "base", device="cpu", compute_type="int8",
+            )
+        segments, _info = self._whisper_model.transcribe(
+            audio, language="en", beam_size=1,
         )
-        return (result.get("text") or "").strip()
+        return " ".join(seg.text for seg in segments).strip()

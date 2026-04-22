@@ -17,7 +17,8 @@ resemblyzer>=0.1.4
 torch>=2.0            # CUDA build recommended; CPU fallback works
 
 # Ambient memory (the subconscious) — 30s chunks → transcript → JSONL
-openai-whisper>=20231117
+faster-whisper>=1.0          # CTranslate2-based, 3-4x faster than openai-whisper on CPU,
+                             # and has no torch dependency so it dodges c10.dll load failures.
 
 # Sensor support
 psutil>=5.9          # active-window process name lookup (screen sensor)
