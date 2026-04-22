@@ -21,6 +21,7 @@ from .base import Sensor
 # Muse S Gen 2 characteristic UUIDs
 CONTROL_UUID = "273e0001-4c4d-454d-96be-f03bac821358"
 DATA1_UUID = "273e0013-4c4d-454d-96be-f03bac821358"
+DATA2_UUID = "273e0014-4c4d-454d-96be-f03bac821358"  # [write, indicate] — newer firmware control
 DATA3_UUID = "273e0015-4c4d-454d-96be-f03bac821358"
 
 SAMPLE_RATE_HZ = 256
@@ -219,41 +220,84 @@ class EEGSensor(Sensor):
             await client.start_notify(CONTROL_UUID, on_control)
             await client.start_notify(DATA1_UUID, on_data)
             await client.start_notify(DATA3_UUID, on_data)
+            # DATA2 on newer Muse S Athena firmware has [write, indicate] —
+            # also subscribe to it so any data that flows there is captured.
+            try:
+                await client.start_notify(DATA2_UUID, on_data)
+            except Exception as e:
+                print(f"[eeg] DATA2 notify unavailable: {e}")
+
+            # HALT first — in case the device is locked in a previous preset
+            # (our enumerate showed ps:33 in its status response).
+            try:
+                await client.write_gatt_char(CONTROL_UUID, HALT_CMD)
+                await asyncio.sleep(0.3)
+            except Exception:
+                pass
 
             # Wake sequence
             try:
                 await client.write_gatt_char(CONTROL_UUID, VERSION_CMD)
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(0.4)
                 await client.write_gatt_char(CONTROL_UUID, DEVICE_INFO_CMD)
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(0.4)
             except Exception as e:
                 self.last_error = f"wake failed: {e}"
 
-            # Try presets. Each gets 2s to start streaming — short presets
-            # sometimes take a moment before data arrives.
+            # Try command sequences. Device status showed "ps":33 (= 0x21 =
+            # preset 21 already active), so attempting to set a preset is
+            # rejected with rc:69. Just sending 's' (start) may be sufficient.
+            # We try the minimal sequence first, then fall back to presets.
             pre_count = self.packet_count
-            for preset in PRESETS:
-                if not self.running:
+            START_CMD = bytearray([0x02, 0x73, 0x0a])  # 's' — start streaming
+
+            sequences = [
+                ("s-only/0001/wwr", CONTROL_UUID, False, [START_CMD]),
+                ("s-only/0014/ack", DATA2_UUID, True, [START_CMD]),
+                ("p21+s/0001/wwr", CONTROL_UUID, False,
+                    [bytearray([0x04, 0x70, 0x32, 0x31, 0x0a]), START_CMD]),
+                ("p21+s/0014/ack", DATA2_UUID, True,
+                    [bytearray([0x04, 0x70, 0x32, 0x31, 0x0a]), START_CMD]),
+                ("all-presets/0001/wwr", CONTROL_UUID, False, PRESETS),
+                ("all-presets/0014/ack", DATA2_UUID, True, PRESETS),
+            ]
+
+            found = False
+            for path_name, uuid, with_response, cmds in sequences:
+                if found or not self.running:
                     break
+                print(f"[eeg] trying {path_name}")
+                # Halt between sequences to reset device state
                 try:
-                    await client.write_gatt_char(CONTROL_UUID, preset)
-                except Exception as e:
-                    self.last_error = f"preset write failed: {e}"
-                    continue
-                # Poll for packets every 250ms up to 2s
-                for _ in range(8):
+                    await client.write_gatt_char(CONTROL_UUID, HALT_CMD)
+                    await asyncio.sleep(0.3)
+                except Exception:
+                    pass
+                for cmd in cmds:
+                    if not self.running:
+                        break
+                    try:
+                        await client.write_gatt_char(uuid, cmd, response=with_response)
+                    except Exception as e:
+                        print(f"[eeg {path_name}] write {cmd.hex()} failed: {e}")
+                        continue
+                    await asyncio.sleep(0.3)
+                # Give this sequence 3s to produce packets
+                for _ in range(12):
                     await asyncio.sleep(0.25)
                     if self.packet_count > pre_count:
+                        found = True
+                        print(f"[eeg] ✓ packets flowing via {path_name}")
                         break
-                if self.packet_count > pre_count:
-                    self.last_error = None
-                    break
-            if self.packet_count == pre_count:
+
+            if not found:
                 self.last_error = (
-                    "handshake complete but no data packets — "
-                    "Muse may be paired to another app (Muse app, Mind Monitor). "
-                    "Close other clients and Start again."
+                    "Muse responds to handshake but all presets rejected (rc:69). "
+                    "Firmware may use an undocumented start command — check bridge log "
+                    "for 'eeg control' lines and share the responses."
                 )
+            else:
+                self.last_error = None
 
             # Stream loop: periodically flush a summary row, watch for stop
             last_flush = time.time()
@@ -279,7 +323,7 @@ class EEGSensor(Sensor):
                 await client.write_gatt_char(CONTROL_UUID, HALT_CMD)
             except Exception:
                 pass
-            for uuid in (CONTROL_UUID, DATA1_UUID, DATA3_UUID):
+            for uuid in (CONTROL_UUID, DATA1_UUID, DATA2_UUID, DATA3_UUID):
                 try:
                     await client.stop_notify(uuid)
                 except Exception:
