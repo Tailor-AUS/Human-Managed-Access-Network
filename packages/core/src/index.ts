@@ -93,6 +93,16 @@ export {
   type Ed25519KeyPair,
 } from './entity/index.js';
 
+// Payment rail adapters (PROTOCOL.md § Payment Rail Adapters)
+export {
+  RailRegistry,
+  BainkAdapter,
+  StripeAdapter,
+  type PaymentRailSelection,
+  type BainkAdapterConfig,
+  type StripeAdapterConfig,
+} from './payment-rails/index.js';
+
 // HMAN SDK - convenient wrapper for common operations
 export { HmanSDK, createHmanSDK, type HmanSDKConfig } from './sdk.js';
 

@@ -84,6 +84,21 @@ export {
   type CognitiveLoadOverride,
 } from './entity.js';
 
+// Payment Rail Adapter protocol (PROTOCOL.md § Payment Rail Adapters)
+export {
+  type Money,
+  type RailDescription,
+  type SettlementIntent,
+  type SettlementEvent,
+  type SettlementSubmittedEvent,
+  type SettlementStatusUpdateEvent,
+  type SettlementSettledEvent,
+  type SettlementFailedEvent,
+  type SettlementProof,
+  type VerifyResult,
+  type PaymentRailAdapter,
+} from './payment-rail.js';
+
 // Messaging types
 export {
   type Message,
