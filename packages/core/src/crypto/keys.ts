@@ -28,6 +28,11 @@ import {
   type KeyDerivationConfig,
   DEFAULT_KEY_DERIVATION_CONFIG,
 } from './encryption.js';
+import {
+  generateEntityKeyPair,
+  signDetachedEd25519,
+} from '../entity/entity-keys.js';
+import type { EntityId, EntityKeyData } from '@hman/shared';
 
 export interface MasterKeyData {
   /** Base64-encoded salt used for key derivation */
@@ -55,6 +60,7 @@ export interface VaultKeyData {
 export class KeyManager {
   private masterKey: Uint8Array | null = null;
   private vaultKeys: Map<string, Uint8Array> = new Map();
+  private entitySecretKeys: Map<EntityId, Uint8Array> = new Map();
   private initialized = false;
 
   /**
@@ -127,6 +133,11 @@ export class KeyManager {
       secureWipe(key);
     }
     this.vaultKeys.clear();
+
+    for (const key of this.entitySecretKeys.values()) {
+      secureWipe(key);
+    }
+    this.entitySecretKeys.clear();
   }
 
   /**
@@ -211,12 +222,16 @@ export class KeyManager {
 
   /**
    * Change the master passphrase
-   * Re-encrypts all vault keys with the new master key
+   * Re-encrypts all vault keys and entity signing keys with the new master key.
    */
   async changePassphrase(
     newPassphrase: string,
     config: KeyDerivationConfig = DEFAULT_KEY_DERIVATION_CONFIG
-  ): Promise<{ masterKeyData: MasterKeyData; vaultKeys: VaultKeyData[] }> {
+  ): Promise<{
+    masterKeyData: MasterKeyData;
+    vaultKeys: VaultKeyData[];
+    entityKeys: EntityKeyData[];
+  }> {
     this.ensureInit();
     if (!this.masterKey) {
       throw new Error('Master key not unlocked');
@@ -241,6 +256,21 @@ export class KeyManager {
       });
     }
 
+    // Re-encrypt all entity signing keys with new master key
+    const reEncryptedEntityKeys: EntityKeyData[] = [];
+    for (const [entityId, secretKey] of this.entitySecretKeys) {
+      const { encryptedKey, nonce } = encryptKey(secretKey, newMasterKey);
+      // Derive the public key from the 64-byte secret key (last 32 bytes).
+      const publicKey = secretKey.slice(32);
+      reEncryptedEntityKeys.push({
+        entity_id: entityId,
+        public_key: toBase64(publicKey),
+        encrypted_secret_key: encryptedKey,
+        nonce,
+        created_at: new Date().toISOString(),
+      });
+    }
+
     // Wipe old master key
     secureWipe(this.masterKey);
 
@@ -254,7 +284,86 @@ export class KeyManager {
         keyHash: hashString(toBase64(newMasterKey)),
       },
       vaultKeys: reEncryptedVaultKeys,
+      entityKeys: reEncryptedEntityKeys,
     };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Entity signing keys (Ed25519)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Generate a new Ed25519 signing keypair for an entity.
+   * Encrypts the secret key with the master key, caches the secret key
+   * in memory, and returns a persistable EntityKeyData.
+   */
+  createEntityKey(entityId: EntityId): EntityKeyData {
+    this.ensureInit();
+    if (!this.masterKey) {
+      throw new Error('Master key not unlocked');
+    }
+
+    const { publicKey, secretKey } = generateEntityKeyPair();
+    const { encryptedKey, nonce } = encryptKey(secretKey, this.masterKey);
+
+    // Cache the in-memory secret key under the entity id. We do NOT wipe
+    // `secretKey` here because the Map now owns that buffer.
+    this.entitySecretKeys.set(entityId, secretKey);
+
+    return {
+      entity_id: entityId,
+      public_key: toBase64(publicKey),
+      encrypted_secret_key: encryptedKey,
+      nonce,
+      created_at: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Load a persisted entity signing key into memory.
+   */
+  loadEntityKey(record: EntityKeyData): void {
+    this.ensureInit();
+    if (!this.masterKey) {
+      throw new Error('Master key not unlocked');
+    }
+
+    const secretKey = decryptKey(
+      record.encrypted_secret_key,
+      record.nonce,
+      this.masterKey
+    );
+    this.entitySecretKeys.set(record.entity_id, secretKey);
+  }
+
+  /**
+   * Check whether an entity's signing key is currently in memory.
+   */
+  hasEntityKey(entityId: EntityId): boolean {
+    return this.entitySecretKeys.has(entityId);
+  }
+
+  /**
+   * Unload (wipe) an entity signing key from memory.
+   */
+  unloadEntityKey(entityId: EntityId): void {
+    const key = this.entitySecretKeys.get(entityId);
+    if (key) {
+      secureWipe(key);
+      this.entitySecretKeys.delete(entityId);
+    }
+  }
+
+  /**
+   * Sign `message` with the entity's loaded signing key.
+   * Returns the base64 signature. Throws if the key isn't loaded.
+   */
+  signAsEntity(entityId: EntityId, message: Uint8Array): string {
+    const key = this.entitySecretKeys.get(entityId);
+    if (!key) {
+      throw new Error(`Entity signing key not loaded: ${entityId}`);
+    }
+    return signDetachedEd25519(message, key);
   }
 
   /**

@@ -75,6 +75,24 @@ export {
   type AccessNotificationHandler,
 } from './access/index.js';
 
+// Entity module - multi-entity model (PROTOCOL.md § Multi-Entity Model)
+export {
+  EntityManager,
+  EntityError,
+  EntityErrorCode,
+  MemoryEntityStorage,
+  generateEntityKeyPair,
+  signDetachedEd25519,
+  verifyDetachedEd25519,
+  canonicalJsonBytes,
+  migrateToMultiEntity,
+  type EntityStorage,
+  type EntityManagerConfig,
+  type CreateEntityInput,
+  type UpdateEntityInput,
+  type Ed25519KeyPair,
+} from './entity/index.js';
+
 // HMAN SDK - convenient wrapper for common operations
 export { HmanSDK, createHmanSDK, type HmanSDKConfig } from './sdk.js';
 

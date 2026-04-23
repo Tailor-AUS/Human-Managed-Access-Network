@@ -70,6 +70,11 @@ export interface AuditResource {
   permissionLevel: PermissionLevel;
   /** Brief description */
   description?: string;
+  /**
+   * Optional entity whose scope this access was performed under.
+   * Undefined for pre-multi-entity entries.
+   */
+  entityId?: string;
 }
 
 export interface AuditOutcome {

@@ -32,6 +32,12 @@ export interface Vault {
   isUnlocked: boolean;
   /** Vault-level encryption metadata */
   encryptionMetadata: VaultEncryptionMetadata;
+  /**
+   * Optional entity this vault belongs to. Vaults created before the
+   * multi-entity model will have this undefined until migrated.
+   * See packages/shared/src/types/entity.ts.
+   */
+  entityId?: string;
 }
 
 export interface VaultEncryptionMetadata {

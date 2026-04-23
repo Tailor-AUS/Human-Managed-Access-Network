@@ -569,4 +569,28 @@ export class VaultManager {
 
     await this.storage.saveItem(item);
   }
+
+  /**
+   * Attach a vault to an entity (multi-entity model).
+   * Pass `undefined` to clear the association. See PROTOCOL.md
+   * § Multi-Entity Model.
+   */
+  async setVaultEntity(vaultId: string, entityId: string | undefined): Promise<Vault> {
+    const vault = await this.storage.getVault(vaultId);
+    if (!vault) {
+      throw new VaultError(`Vault not found: ${vaultId}`, VaultErrorCode.NotFound);
+    }
+    vault.entityId = entityId;
+    vault.updatedAt = new Date();
+    await this.storage.saveVault(vault);
+    return vault;
+  }
+
+  /**
+   * Return the vaults attached to a given entity.
+   */
+  async getVaultsForEntity(entityId: string): Promise<Vault[]> {
+    const all = await this.storage.getAllVaults();
+    return all.filter((v) => v.entityId === entityId);
+  }
 }

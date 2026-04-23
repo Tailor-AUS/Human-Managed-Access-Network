@@ -58,6 +58,32 @@ export {
   type AuditSummary,
 } from './audit.js';
 
+// Entity types (multi-entity model — PROTOCOL.md § Multi-Entity Model)
+export {
+  EntityStatus,
+  ReceptivityChannel,
+  DEFAULT_RECEPTIVITY_POLICY,
+  DEFAULT_PERSONAL_ENTITY_NAME,
+  type Entity,
+  type EntityId,
+  type MemberId,
+  type EntityKeyData,
+  type PaymentRailNomination,
+  type PayIDNomination,
+  type OskoNomination,
+  type BPayNomination,
+  type StripeNomination,
+  type VaultScope,
+  type ReceptivityPolicy,
+  type ReceptivityRule,
+  type ReceptivityCondition,
+  type OfferAmountCondition,
+  type CounterpartyTrustCondition,
+  type TimeOfDayCondition,
+  type EntityActiveCondition,
+  type CognitiveLoadOverride,
+} from './entity.js';
+
 // Messaging types
 export {
   type Message,

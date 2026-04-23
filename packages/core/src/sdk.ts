@@ -31,12 +31,22 @@ import { createKeyManager, KeyManager, type MasterKeyData } from './crypto/index
 import { VaultManager, MemoryVaultStorage, type VaultStorage } from './vault/index.js';
 import { AuditLogger, MemoryAuditStorage, type AuditStorage } from './audit/index.js';
 import { Gate, type AccessRequestHandler, type AccessNotificationHandler } from './access/index.js';
+import {
+  EntityManager,
+  MemoryEntityStorage,
+  migrateToMultiEntity,
+  type EntityStorage,
+} from './entity/index.js';
 
 export interface HmanSDKConfig {
   /** Custom vault storage (defaults to in-memory) */
   vaultStorage?: VaultStorage;
   /** Custom audit storage (defaults to in-memory) */
   auditStorage?: AuditStorage;
+  /** Custom entity storage (defaults to in-memory) */
+  entityStorage?: EntityStorage;
+  /** Root member identifier. Auto-generated when omitted. */
+  memberId?: string;
   /** Handler for gated access requests */
   accessRequestHandler?: AccessRequestHandler;
   /** Handler for access notifications */
@@ -51,6 +61,7 @@ export class HmanSDK {
   readonly vaultManager: VaultManager;
   readonly auditLogger: AuditLogger;
   readonly gate: Gate;
+  readonly entityManager: EntityManager;
 
   private masterKeyData: MasterKeyData | null = null;
 
@@ -58,12 +69,14 @@ export class HmanSDK {
     keyManager: KeyManager,
     vaultManager: VaultManager,
     auditLogger: AuditLogger,
-    gate: Gate
+    gate: Gate,
+    entityManager: EntityManager
   ) {
     this.keyManager = keyManager;
     this.vaultManager = vaultManager;
     this.auditLogger = auditLogger;
     this.gate = gate;
+    this.entityManager = entityManager;
   }
 
   /**
@@ -107,6 +120,10 @@ export class HmanSDK {
 
     // Initialize audit logger
     await this.auditLogger.init();
+
+    // Create the default "Personal" entity and attach all default vaults.
+    // Idempotent via migrateToMultiEntity — safe to call after init as well.
+    await migrateToMultiEntity(this.entityManager, this.vaultManager);
   }
 
   /**
@@ -340,6 +357,7 @@ export async function createHmanSDK(config: HmanSDKConfig = {}): Promise<HmanSDK
   // Create storage backends
   const vaultStorage = config.vaultStorage ?? new MemoryVaultStorage();
   const auditStorage = config.auditStorage ?? new MemoryAuditStorage();
+  const entityStorage = config.entityStorage ?? new MemoryEntityStorage();
 
   // Create vault manager
   const vaultManager = new VaultManager({
@@ -358,5 +376,13 @@ export async function createHmanSDK(config: HmanSDKConfig = {}): Promise<HmanSDK
     accessNotificationHandler: config.accessNotificationHandler,
   });
 
-  return new HmanSDK(keyManager, vaultManager, auditLogger, gate);
+  // Create entity manager (root member id falls back to a deterministic
+  // placeholder — callers that care about identity should pass memberId).
+  const entityManager = new EntityManager({
+    storage: entityStorage,
+    keyManager,
+    memberId: config.memberId ?? 'member-local',
+  });
+
+  return new HmanSDK(keyManager, vaultManager, auditLogger, gate, entityManager);
 }

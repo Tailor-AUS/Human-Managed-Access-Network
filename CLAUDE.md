@@ -27,7 +27,7 @@ If a change could weaken any gate, flag it.
 | `packages/core/` | TS (libsodium, better-sqlite3) | SDK: crypto, vaults, audit, Signal client, bridge, messaging, delegation, payments, bots, authenticity |
 | `packages/mcp-server/` | TS (@modelcontextprotocol/sdk) | MCP server `hman-gate` for Claude Desktop integration |
 | `packages/shared/` | TS | Shared types |
-| `packages/python-bridge/` | Python 3.11+ (FastAPI) | Local HTTP bridge on `127.0.0.1:8765` — voice enrolment, speaker verification (Resemblyzer), gate state, sensors |
+| `packages/python-bridge/` | Python 3.11+ (FastAPI) | Local HTTP bridge on `127.0.0.1:8765` — voice enrolment, speaker verification (Resemblyzer), gate state, sensors (`audio`, `eeg` via Bleak/Muse S Athena, `keystrokes`, `screen` via psutil) |
 | `packages/bridge-relay-listener/` | .NET 9 | Outbound-only Azure Relay listener; exposes local bridge at `bridge.<domain>` with no inbound ports |
 | `apps/web-dashboard/` | React 18 + Vite + Tailwind | Member UI — TokenGate, Onboarding, Gates, Vaults, Subconscious, Memory, Audit |
 | `infra/` | Bicep | SWA + Azure Relay + Key Vault + App Insights + DNS |
@@ -61,7 +61,11 @@ cd packages/core && pnpm vitest run src/__tests__/crypto.test.ts
 # MCP server dev loop (tsx hot-reload)
 pnpm --filter @hman/mcp-server dev
 
-# Web dashboard dev (vite.config.ts says port 3000; bridge CORS defaults to 5173 too)
+# Web dashboard dev — note: vite.config.ts sets port 3000, but the bridge's
+# default CORS allow-list is 5173/5174 only. Either change vite's port to 5173
+# OR export HMAN_ALLOWED_ORIGINS=http://localhost:3000 before starting the
+# bridge, otherwise the dashboard will 401 against /api/*.
+# The dashboard has its own package-lock.json and is driven with npm, not pnpm.
 cd apps/web-dashboard && npm run dev
 
 # Python bridge
