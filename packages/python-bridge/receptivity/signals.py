@@ -126,10 +126,10 @@ def score_behavioral(state: SensorState) -> tuple[float, str]:
     # ── Active application ──────────────────────────────────────────
     if state.active_app:
         app = state.active_app
-        if any(app.startswith(f) for f in _FOCUS_APPS):
+        if app in _FOCUS_APPS:
             score -= 0.15
             reasons.append(f"in {app}")
-        elif any(app.startswith(r) for r in _RELAXED_APPS):
+        elif app in _RELAXED_APPS:
             score += 0.10
             reasons.append(f"in {app}")
 

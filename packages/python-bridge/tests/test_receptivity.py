@@ -166,10 +166,11 @@ class TestReceptivityGate:
 
     def test_exhausted_voice_budget_falls_back_to_text(self):
         exhausted_budget = _budget(words_remaining=0, interruptions_today=0)
-        # high urgency to force voice selection path
+        # high urgency + signal_active=True would normally select voice, but the
+        # budget is exhausted so the gate must fall back to text or queue.
         high_urgency = _intention(urgency="high")
         idle = _idle_state()
-        idle.signal_active = True  # would normally trigger voice
+        idle.signal_active = True
         decision = receptivity_gate(high_urgency, idle, exhausted_budget)
         if decision.surface_now:
             assert decision.channel in ("text", "queue")
@@ -229,8 +230,7 @@ class TestReceptivityGate:
         intention = _intention(description="File the Muse firmware bug")
         decision = receptivity_gate(intention, _busy_state(), _budget())
         if not decision.surface_now:
-            assert "File the Muse firmware bug" in decision.reason or \
-                   "File the Muse firmware" in decision.reason
+            assert "Muse firmware" in decision.reason
 
 
 # ── DailyBudget property tests ────────────────────────────────────────

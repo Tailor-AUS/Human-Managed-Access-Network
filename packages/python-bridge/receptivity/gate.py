@@ -54,6 +54,9 @@ _VOICE_MIN_SCORE = 0.70
 # threshold by up to 0.25).
 _MAX_URGENCY_DISCOUNT = 0.25
 
+# Maximum characters to include from intention.context in the reason string.
+_MAX_CONTEXT_CHARS = 80
+
 
 def receptivity_gate(
     intention: Intention,
@@ -163,7 +166,7 @@ def _surface_reason(
     if channel == "voice":
         parts = [desc]
         if intention.context:
-            ctx = intention.context[:80]
+            ctx = intention.context[:_MAX_CONTEXT_CHARS]
             parts.append(ctx)
         return _truncate_to_40_words(". ".join(parts))
     else:
