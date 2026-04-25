@@ -1,4 +1,4 @@
-"""EEG sensor — Muse S Athena via Bluetooth LE.
+"""EEG sensor — Muse S (Gen 2) via Bluetooth LE.
 
 Ported from muse-brain/stream_v2.py. Runs an asyncio event loop inside
 the sensor's thread, manages the bleak BleakClient lifecycle, and
@@ -7,16 +7,39 @@ scaled to microvolts).
 
 MVP: tracks connection state, packet rate, and rolling sample buffer.
 Writes a summary row every FLUSH_SECONDS. Band-power FFT to come later.
+
+## Hardware compatibility
+
+| Device | Status |
+|---|---|
+| Muse S Gen 2 | ✓ Supported |
+| Muse 2 | ✓ Supported |
+| Muse S Athena | ✗ Not yet supported — Athena firmware rejects all documented |
+|               |   preset and start commands with rc:69. BLE traffic capture from |
+|               |   the official Muse app is needed to discover the correct start |
+|               |   sequence. Track progress in the open GitHub issue. |
+
+When an Athena device is detected (OUI ``00:55:DA:`` or ``"ps":33`` in
+the device-info response) the sensor sets ``last_error`` to a clear
+message and stops retrying so the dashboard does not spin indefinitely
+with ``packets: 0``.
 """
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import time
 from collections import deque
 from typing import Any, Optional
 
 from .base import Sensor
+
+# Muse S Athena — Interaxon OUI. Devices with this MAC prefix run a firmware
+# revision that rejects all documented start/preset commands with rc:69.
+# When detected, the sensor surfaces a clear "not yet supported" error and
+# stops retrying rather than looping indefinitely with packets:0.
+_ATHENA_OUI = "00:55:DA:"
 
 # Muse S Gen 2 characteristic UUIDs
 CONTROL_UUID = "273e0001-4c4d-454d-96be-f03bac821358"
@@ -290,11 +313,41 @@ class EEGSensor(Sensor):
                         break
 
             if not found:
-                self.last_error = (
-                    "Muse responds to handshake but all presets rejected (rc:69). "
-                    "Firmware may use an undocumented start command — check bridge log "
-                    "for 'eeg control' lines and share the responses."
-                )
+                # Determine whether this is a Muse S Athena device.
+                # Two reliable indicators:
+                #   1. MAC OUI 00:55:DA: — Interaxon batch assigned to Athena.
+                #   2. "ps":33 in the device-info reply (preset 21 = 0x21 = 33
+                #      is baked in as the active preset on Athena firmware and
+                #      causes rc:69 on every attempt to set or start streaming).
+                is_athena_oui = self.address.upper().startswith(_ATHENA_OUI)
+                is_preset_33 = False
+                for entry in self._control_log:
+                    try:
+                        parsed = json.loads(entry)
+                        if parsed.get("ps") == 33:
+                            is_preset_33 = True
+                            break
+                    except Exception:
+                        pass
+                if is_athena_oui or is_preset_33:
+                    self.last_error = (
+                        "Muse S Athena firmware is not yet supported. "
+                        "All preset and start commands are rejected by this firmware "
+                        "(rc:69). BLE traffic capture from the official Muse app is "
+                        "needed to discover the correct start sequence. "
+                        "Stopping sensor — see the open GitHub issue for progress."
+                    )
+                    print(
+                        "[eeg] Muse S Athena detected — unsupported firmware. "
+                        "Stopping sensor to avoid indefinite packets:0 loop."
+                    )
+                    self.running = False
+                else:
+                    self.last_error = (
+                        "Muse responds to handshake but all presets rejected (rc:69). "
+                        "Firmware may use an undocumented start command — check bridge log "
+                        "for 'eeg control' lines and share the responses."
+                    )
             else:
                 self.last_error = None
 
