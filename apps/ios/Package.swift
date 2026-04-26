@@ -45,7 +45,18 @@ let package = Package(
                 .product(name: "Clibsodium", package: "swift-sodium"),
                 .product(name: "KeychainAccess", package: "KeychainAccess"),
             ],
-            path: "Sources/HMAN"
+            path: "Sources/HMAN",
+            // Biometric/Resources/ holds the placeholder for the
+            // Resemblyzer CoreML model (#18). Once the real
+            // Resemblyzer.mlmodel lands locally the SPM build will
+            // compile it to .mlmodelc and bundle automatically; the
+            // explicit `.copy` here keeps the placeholder + README
+            // out of the resources processing pipeline (we don't want
+            // SPM to choke on a non-asset placeholder file).
+            exclude: [
+                "Biometric/Resources/Resemblyzer.mlmodel.placeholder",
+                "Biometric/README.md",
+            ]
         ),
         .testTarget(
             name: "HMANTests",
