@@ -18,6 +18,10 @@ apps/ios/
 │   ├── ContentView.swift               TabView shell
 │   ├── HMAN.entitlements               capabilities (HealthKit; xcodeproj-consumed)
 │   ├── Bridge/HMANBridgeClient.swift   typed FastAPI wrapper, BridgeError
+│   ├── Crypto/                         PACT signing primitives (#15)
+│   │   ├── PACTSigner.swift            Ed25519 + Argon2id via swift-sodium
+│   │   ├── KeyManager.swift            Keychain-backed keypair persistence
+│   │   └── ConstantTime.swift          libsodium-backed timing-safe compare
 │   ├── Models/                         Codable ports of shared TS types
 │   ├── Receptivity/HealthKitSignal.swift   HealthKit → (score, confidence, reason)
 │   ├── Resources/Info.plist            NSHealthShareUsageDescription
@@ -25,7 +29,9 @@ apps/ios/
 │   └── Views/                          placeholder routes (Welcome, ...)
 └── Tests/HMANTests/
     ├── HMANBridgeClientTests.swift     URL-construction + decoder tests
-    └── HealthKitSignalTests.swift      receptivity-heuristic coverage
+    ├── HealthKitSignalTests.swift      receptivity-heuristic coverage
+    ├── CryptoTests.swift               PACT roundtrip + cross-platform fixture
+    └── Fixtures/                       JSON signatures for desktop verifier
 ```
 
 ## Requirements
@@ -98,7 +104,7 @@ let gates = try await client.gatesStatus()
 
 Pulled via SwiftPM (declared in `Package.swift`):
 
-- [`swift-sodium`](https://github.com/jedisct1/swift-sodium) — libsodium bindings, used by Wave 2 #15 PACT signing.
+- [`swift-sodium`](https://github.com/jedisct1/swift-sodium) — libsodium bindings, used by PACT signing (#15) and any future E2EE work.
 - [`KeychainAccess`](https://github.com/kishikawakatsumi/KeychainAccess) — Keychain wrapper for bridge tokens, biometric material, PACT keys.
 
 HTTP uses `URLSession` directly — no Alamofire — to keep the dependency surface small.
