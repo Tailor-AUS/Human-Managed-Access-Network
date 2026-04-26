@@ -191,6 +191,56 @@ export function generateKeyPair(): { publicKey: Uint8Array; privateKey: Uint8Arr
   };
 }
 
+// ─── Ed25519 detached signing (PACT consent attestations) ────────────────
+//
+// These primitives mirror the Swift port in
+// `apps/ios/Sources/HMAN/Crypto/PACTSigner.swift`. Wire format is raw
+// libsodium output: 32-byte public key, 64-byte secret key (seed + pub),
+// 64-byte detached signature. Higher layers base64-encode at storage /
+// network boundaries via `toBase64`.
+
+/**
+ * Generate a fresh Ed25519 signing keypair. Caller owns both buffers —
+ * wipe `privateKey` with `secureWipe` once it's been encrypted to a key
+ * manager record.
+ */
+export function generateSigningKeyPair(): { publicKey: Uint8Array; privateKey: Uint8Array } {
+  ensureInit();
+  const kp = sodium.crypto_sign_keypair();
+  return {
+    publicKey: kp.publicKey,
+    privateKey: kp.privateKey,
+  };
+}
+
+/**
+ * Detached Ed25519 signature over `message`. Returns 64 raw bytes — encode
+ * with `toBase64` for storage. Throws on malformed key length, matching
+ * libsodium's behaviour.
+ */
+export function sign(message: Uint8Array, privateKey: Uint8Array): Uint8Array {
+  ensureInit();
+  return sodium.crypto_sign_detached(message, privateKey);
+}
+
+/**
+ * Verify a detached Ed25519 signature. Never throws — returns false on
+ * any malformed input or verification failure. Mirrors the Swift port's
+ * `PACTSigner.verify` contract exactly.
+ */
+export function verify(
+  message: Uint8Array,
+  signature: Uint8Array,
+  publicKey: Uint8Array
+): boolean {
+  ensureInit();
+  try {
+    return sodium.crypto_sign_verify_detached(signature, message, publicKey);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Encrypt for a recipient using their public key (sealed box)
  */
