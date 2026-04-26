@@ -16,6 +16,7 @@ Core responsibilities:
   - Compute a voice embedding
   - Encrypt/decrypt a reference embedding at rest (Fernet + PBKDF2)
   - Write tamper-evident audit logs
+  - Short-lived pairing codes for QR-based phone enrolment
 """
 from __future__ import annotations
 
@@ -23,6 +24,7 @@ import base64
 import hashlib
 import json
 import os
+import secrets
 import threading
 import time
 from dataclasses import dataclass, field, asdict
@@ -306,3 +308,154 @@ PROMPTS: list[str] = [
     "She writes. She walks. She thinks. She breathes. She answers.",
     "Checking, sending, logged, saved, done. Calm and precise.",
 ]
+
+
+# ── Pairing codes (in-memory, short-lived) ──────────────────────────
+#
+# Used by /api/pair/begin and /api/pair/redeem to onboard a phone via
+# QR code. The desktop generates a 6-character code + URL, displays it
+# as a QR; the phone scans, the SWA hits redeem, the phone gets the
+# bearer token. State is held in process memory only — process restart
+# correctly invalidates outstanding codes (no persistent record on disk).
+#
+# Security ceiling:
+#   - 60 second TTL
+#   - Single-use redemption (`redeemed` flag flips on first call)
+#   - Max 3 redeem attempts per code; further attempts kill the code
+#   - Codes use a confusable-free alphabet (no I/O/0/1)
+
+PAIRING_TTL_SECONDS = 60
+PAIRING_CODE_LENGTH = 6
+PAIRING_MAX_REDEEM_ATTEMPTS = 3
+PAIRING_BEGIN_RATE_WINDOW = 60.0   # seconds
+PAIRING_BEGIN_RATE_MAX = 10        # per IP per window
+
+# Confusable-free: A-Z2-9 minus IO01
+_PAIRING_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+
+@dataclass
+class PairingCode:
+    code: str
+    token: str           # the bearer token to hand back on redeem
+    created_at: float    # unix ts (monotonic-equivalent enough at TTL=60s)
+    expires_at: float
+    attempts: int = 0    # increments on each redeem call
+    redeemed: bool = False
+
+
+# code → PairingCode. Only living entries; expired ones get evicted lazily.
+_pairing_codes: dict[str, PairingCode] = {}
+_pairing_lock = threading.Lock()
+
+# IP → list[float] of begin-call timestamps within the current window.
+_pairing_begin_history: dict[str, list[float]] = {}
+
+
+def _generate_pairing_code() -> str:
+    """6-char code from the confusable-free alphabet."""
+    return "".join(secrets.choice(_PAIRING_ALPHABET) for _ in range(PAIRING_CODE_LENGTH))
+
+
+def _evict_expired_codes(now: Optional[float] = None) -> None:
+    """Remove codes past TTL. Called opportunistically on begin/redeem."""
+    now = time.time() if now is None else now
+    expired = [c for c, p in _pairing_codes.items() if p.expires_at <= now]
+    for c in expired:
+        _pairing_codes.pop(c, None)
+
+
+def begin_pairing(token: str, base_url: str, remote_ip: str) -> tuple[PairingCode, str]:
+    """Mint a new pairing code. Returns (PairingCode, redeem_url).
+
+    Raises ValueError if rate-limit hit. The bearer `token` is the value
+    the phone will receive on redeem — pass the bridge's HMAN_AUTH_TOKEN.
+    `base_url` is the public origin the phone will hit (e.g. the SWA URL).
+
+    On collision (vanishingly unlikely), regenerates the code.
+    """
+    now = time.time()
+    with _pairing_lock:
+        # Rate-limit per remote IP
+        history = [t for t in _pairing_begin_history.get(remote_ip, []) if now - t < PAIRING_BEGIN_RATE_WINDOW]
+        if len(history) >= PAIRING_BEGIN_RATE_MAX:
+            _pairing_begin_history[remote_ip] = history
+            raise ValueError("rate limit exceeded")
+        history.append(now)
+        _pairing_begin_history[remote_ip] = history
+
+        _evict_expired_codes(now)
+
+        # Generate a fresh code. Retry on collision (extremely unlikely; ~32^6 = 1 in 1B).
+        for _ in range(8):
+            code = _generate_pairing_code()
+            if code not in _pairing_codes:
+                break
+        else:
+            raise ValueError("could not allocate code")
+
+        entry = PairingCode(
+            code=code,
+            token=token,
+            created_at=now,
+            expires_at=now + PAIRING_TTL_SECONDS,
+        )
+        _pairing_codes[code] = entry
+
+    # base_url should be a bare origin (e.g. https://hman.example.com).
+    redeem_url = f"{base_url.rstrip('/')}/redeem?code={code}"
+    return entry, redeem_url
+
+
+class PairingError(Exception):
+    """Raised by redeem_pairing when the code can't be redeemed."""
+
+    def __init__(self, status: int, reason: str):
+        super().__init__(reason)
+        self.status = status
+        self.reason = reason
+
+
+def redeem_pairing(code: str) -> str:
+    """Single-use redemption. Returns the bearer token on success.
+
+    Raises PairingError(status=401|410, reason=...) on every failure mode.
+    Increments attempt counter; deletes the code after PAIRING_MAX_REDEEM_ATTEMPTS
+    failures or on first successful redeem.
+    """
+    code = (code or "").strip().upper()
+    if not code or len(code) != PAIRING_CODE_LENGTH:
+        raise PairingError(401, "invalid code format")
+
+    now = time.time()
+    with _pairing_lock:
+        _evict_expired_codes(now)
+        entry = _pairing_codes.get(code)
+        if entry is None:
+            raise PairingError(401, "unknown or expired code")
+        if entry.expires_at <= now:
+            _pairing_codes.pop(code, None)
+            raise PairingError(410, "code expired")
+        if entry.redeemed:
+            _pairing_codes.pop(code, None)
+            raise PairingError(410, "code already redeemed")
+
+        entry.attempts += 1
+        if entry.attempts > PAIRING_MAX_REDEEM_ATTEMPTS:
+            _pairing_codes.pop(code, None)
+            raise PairingError(410, "too many attempts")
+
+        entry.redeemed = True
+        token = entry.token
+        # Single-use: drop immediately after handing back the token.
+        _pairing_codes.pop(code, None)
+        return token
+
+
+def pairing_state_snapshot() -> dict:
+    """Diagnostic view (for tests / debugging only — never expose over auth-exempt route)."""
+    with _pairing_lock:
+        return {
+            "active": len(_pairing_codes),
+            "ttl_seconds": PAIRING_TTL_SECONDS,
+        }
