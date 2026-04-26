@@ -35,8 +35,15 @@ export function Layout() {
         className={`fixed inset-y-0 left-0 z-50 w-64 transform bg-background-secondary border-r border-border transition-transform lg:translate-x-0 lg:static ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
+        style={{
+          paddingLeft: 'var(--safe-left)',
+          paddingBottom: 'var(--safe-bottom)',
+        }}
       >
-        <div className="flex h-16 items-center gap-3 border-b border-border px-6">
+        <div
+          className="flex min-h-16 items-center gap-3 border-b border-border px-6"
+          style={{ paddingTop: 'var(--safe-top)' }}
+        >
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
             <Shield className="h-5 w-5 text-white" />
           </div>
@@ -84,9 +91,18 @@ export function Layout() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto">
-        {/* Mobile header */}
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background px-4 lg:hidden">
+      <main
+        className="flex-1 overflow-auto"
+        style={{
+          paddingRight: 'var(--safe-right)',
+          paddingBottom: 'var(--safe-bottom)',
+        }}
+      >
+        {/* Mobile header — extra top padding so it clears the iOS notch */}
+        <header
+          className="sticky top-0 z-30 flex min-h-16 items-center gap-4 border-b border-border bg-background px-4 lg:hidden"
+          style={{ paddingTop: 'var(--safe-top)' }}
+        >
           <button onClick={() => setSidebarOpen(true)}>
             <Menu className="h-6 w-6" />
           </button>
