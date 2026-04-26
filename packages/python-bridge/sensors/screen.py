@@ -19,6 +19,13 @@ _IS_WINDOWS = platform.system() == "Windows"
 POLL_INTERVAL_S = 0.1  # 10Hz — fast enough for mouse-velocity pulse to be responsive
 HEARTBEAT_S = 60
 BREAK_INACTIVITY_S = 60
+# How often the sensor thread refreshes the cached Win32 enumerations
+# (monitor list + visible-window count). Reads happen on every API poll
+# of /api/sensors; running EnumWindows / EnumDisplayMonitors on the
+# FastAPI event-loop thread can hang the whole bridge if any process
+# in the system is not pumping its message loop (issue #22). We instead
+# update the cache on this sensor's own thread.
+ENUM_REFRESH_S = 2.0
 
 VK_LBUTTON = 0x01
 VK_RETURN = 0x0D
@@ -37,14 +44,21 @@ class ScreenSensor(Sensor):
         self.on_break = False
         self.break_start = 0.0
         self.breaks_taken = 0
+        # Cached Win32 enumerations — refreshed on the sensor thread,
+        # read by summary() without blocking the FastAPI event loop.
+        self._cached_monitors: list[dict] = []
+        self._cached_cursor_screen: int = 0
+        self._cached_window_count: int = 0
+        self._enum_last_refresh: float = 0.0
 
     def available(self) -> bool:
         return _IS_WINDOWS
 
     def pulse(self) -> float:
         # Mouse velocity in pixels over the last 500ms, clamped.
+        # Called from the API thread — snapshot before iterating.
         now = time.time()
-        recent = [p for p in self.mouse_positions if now - p[0] < 0.5]
+        recent = [p for p in tuple(self.mouse_positions) if now - p[0] < 0.5]
         if len(recent) < 2:
             return 0.0
         dist = 0.0
@@ -56,16 +70,28 @@ class ScreenSensor(Sensor):
         return min(1.0, dist / 1500.0)
 
     def summary(self) -> dict[str, Any]:
+        # NOTE: this can be called from the FastAPI event-loop thread
+        # (via /api/sensors). It MUST NOT make Win32 enumeration calls
+        # like EnumWindows / EnumDisplayMonitors directly — those can
+        # block indefinitely if any process in the system is not
+        # pumping its message loop, which would hang the bridge API.
+        # We instead read pre-computed values cached by the sensor's
+        # own poll thread (see ENUM_REFRESH_S in _loop).
         now = time.time()
         cutoff = now - 10
-        recent_pos = [p for p in self.mouse_positions if p[0] > cutoff]
+        # Snapshot the deque to a list before iterating — deques are
+        # mutated by the poll thread on every cycle. tuple() is atomic
+        # in CPython for this size; iterating the deque directly while
+        # another thread mutates it can raise RuntimeError.
+        positions_snapshot = tuple(self.mouse_positions)
+        recent_pos = [p for p in positions_snapshot if p[0] > cutoff]
         dist = 0.0
         for i in range(1, len(recent_pos)):
             dx = recent_pos[i][1] - recent_pos[i - 1][1]
             dy = recent_pos[i][2] - recent_pos[i - 1][2]
             dist += (dx * dx + dy * dy) ** 0.5
-        clicks = sum(1 for t in self.mouse_clicks if t > cutoff)
-        monitors, cursor_screen = _monitor_info()
+        clicks_snapshot = tuple(self.mouse_clicks)
+        clicks = sum(1 for t in clicks_snapshot if t > cutoff)
         return {
             "active_app": self.active_app,
             "active_window": self.active_window[:80],
@@ -73,10 +99,10 @@ class ScreenSensor(Sensor):
             "mouse_clicks_10s": clicks,
             "on_break": self.on_break,
             "breaks_taken": self.breaks_taken,
-            "monitors": monitors,
-            "num_monitors": len(monitors),
-            "cursor_monitor": cursor_screen,
-            "num_windows": _count_visible_windows(),
+            "monitors": self._cached_monitors,
+            "num_monitors": len(self._cached_monitors),
+            "cursor_monitor": self._cached_cursor_screen,
+            "num_windows": self._cached_window_count,
         }
 
     def _loop(self) -> None:
@@ -136,6 +162,26 @@ class ScreenSensor(Sensor):
                         "event": "break_start",
                         "idle_since_s": round(now - self.last_activity_time, 1),
                     })
+
+                # Refresh the cached Win32 enumerations on the sensor
+                # thread, so summary() (called from the API thread) can
+                # return them without blocking the event loop. Doing
+                # this here is what fixes issue #22: EnumWindows can
+                # take seconds-to-forever if a foreground window is
+                # not pumping its message loop, but it can only stall
+                # this thread, not FastAPI.
+                if now - self._enum_last_refresh > ENUM_REFRESH_S:
+                    try:
+                        monitors, cursor_screen = _monitor_info()
+                        self._cached_monitors = monitors
+                        self._cached_cursor_screen = cursor_screen
+                    except Exception:
+                        pass
+                    try:
+                        self._cached_window_count = _count_visible_windows()
+                    except Exception:
+                        pass
+                    self._enum_last_refresh = now
 
                 # Heartbeat row every HEARTBEAT_S
                 if now - last_heartbeat > HEARTBEAT_S:

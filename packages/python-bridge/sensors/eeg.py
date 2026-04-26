@@ -99,18 +99,23 @@ class EEGSensor(Sensor):
 
     def pulse(self) -> float:
         # Packet rate in the last second, normalised to the expected rate.
+        # Snapshot the deque before iterating — the BLE callback (running
+        # on the asyncio thread inside the sensor's loop) appends to
+        # _recent_pkts concurrently with this call from the API thread.
         now = time.time()
         if now - self._last_packet_ts > 2.0:
             return 0.0
         cutoff = now - 1.0
-        recent = sum(1 for t in self._recent_pkts if t > cutoff)
+        recent = sum(1 for t in tuple(self._recent_pkts) if t > cutoff)
         return min(1.0, recent / EXPECTED_PKT_RATE)
 
     def summary(self) -> dict[str, Any]:
         now = time.time()
         last_age = round(now - self._last_packet_ts, 2) if self._last_packet_ts else None
         cutoff = now - 1.0
-        pkt_rate = sum(1 for t in self._recent_pkts if t > cutoff)
+        # Snapshot deques before iteration (see pulse() comment).
+        recent_pkts_snapshot = tuple(self._recent_pkts)
+        pkt_rate = sum(1 for t in recent_pkts_snapshot if t > cutoff)
         # Rough signal amplitude from the last second
         recent_samples = list(self._sample_buffer)[-SAMPLE_RATE_HZ:]
         amp = 0.0
@@ -123,7 +128,7 @@ class EEGSensor(Sensor):
             "packet_rate_hz": pkt_rate,
             "last_packet_age_s": last_age,
             "signal_amp_uv": round(amp, 1),
-            "control_log": self._control_log[-5:],
+            "control_log": list(self._control_log[-5:]),
         }
 
     # ── start/stop override: spin up our own asyncio loop in the thread ──
