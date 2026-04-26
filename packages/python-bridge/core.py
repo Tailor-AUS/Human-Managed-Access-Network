@@ -123,6 +123,51 @@ def embed_audio(audio: np.ndarray) -> tuple[np.ndarray, float]:
     return emb.astype(np.float32), (time.time() - t0) * 1000
 
 
+# ── Speech-to-text (faster-whisper, lazy-loaded singleton) ──────────
+#
+# Shared by the audio sensor (30s ambient chunks) and the PWA voice
+# loop (push-to-talk utterances). Loading the model is slow (~3-5s on
+# first call), so we keep one instance per process.
+
+_whisper_model = None
+_whisper_lock = threading.Lock()
+_WHISPER_SIZE = os.environ.get("HMAN_WHISPER_MODEL", "base").strip() or "base"
+
+
+def get_whisper():
+    """Return a cached faster-whisper WhisperModel."""
+    global _whisper_model
+    with _whisper_lock:
+        if _whisper_model is None:
+            from faster_whisper import WhisperModel
+            _whisper_model = WhisperModel(
+                _WHISPER_SIZE, device="cpu", compute_type="int8",
+            )
+        return _whisper_model
+
+
+def transcribe_audio(audio: np.ndarray, language: str = "en") -> dict:
+    """Transcribe a mono float32 16 kHz numpy array.
+
+    Returns ``{ "text": str, "duration_s": float, "rms": float }``.
+    Reused by both the audio sensor and the PWA push-to-talk endpoint
+    so the transcribe path stays in one place.
+    """
+    duration_s = float(len(audio)) / SAMPLE_RATE if len(audio) else 0.0
+    rms = float(np.sqrt(np.mean(audio ** 2))) if len(audio) else 0.0
+    if duration_s < 0.2 or rms < 1e-4:
+        # Too short or pure silence — skip the model entirely
+        return {"text": "", "duration_s": round(duration_s, 3), "rms": round(rms, 4)}
+    model = get_whisper()
+    segments, _info = model.transcribe(audio, language=language, beam_size=1)
+    text = " ".join(seg.text for seg in segments).strip()
+    return {
+        "text": text,
+        "duration_s": round(duration_s, 3),
+        "rms": round(rms, 4),
+    }
+
+
 # ── Reference embedding persistence (Fernet + PBKDF2) ───────────────
 
 PBKDF2_ITERATIONS = 600_000

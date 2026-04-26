@@ -13,6 +13,7 @@ surface.
 """
 from __future__ import annotations
 
+import asyncio
 import io
 import json
 import os
@@ -30,7 +31,8 @@ import numpy as np
 import traceback
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from starlette.background import BackgroundTask
 from pydantic import BaseModel
 
 # Make sibling module importable when run as script (api/server.py → ../core.py)
@@ -630,6 +632,200 @@ def gates():
         gates=gates_out,
         last_activation=_gate5_last_activation,
         rejections_last_hour=_gate5_rejects,  # simplified; real rolling-hour later
+    )
+
+
+# ── In-PWA voice loop (Wave 1, issue #9) ────────────────────────────
+#
+# Push-to-talk in the web dashboard:
+#     MediaRecorder webm/opus blob
+#  →  POST /api/audio/transcribe         (faster-whisper)
+#  →  POST /api/voice/respond            (Ollama → reply text + optional Piper TTS)
+#  →  GET  /api/voice/audio/{token}      (one-shot signed URL, ~60s)
+#
+# Foreground only on iOS — that's a known PWA constraint and Wave 1
+# explicitly accepts it. Background capture is Wave 2 (native).
+#
+# TTS: if a Piper ONNX voice is present at $HMAN_TTS_MODEL (or
+# ~/.hman/tts/en_US-amy-medium.onnx by default) AND the `piper-tts`
+# CLI is on PATH, /api/voice/respond will synthesize and return a
+# tts_url. Otherwise tts_url is null and the frontend falls back to
+# Web Speech Synthesis (window.speechSynthesis). Either path is
+# acceptable for v1.
+
+_VOICE_MODEL = os.environ.get("HMAN_VOICE_MODEL", "llama3.2:3b").strip() or "llama3.2:3b"
+_OLLAMA_URL = os.environ.get("HMAN_OLLAMA_URL", "http://localhost:11434").rstrip("/")
+_TTS_MODEL_PATH = Path(
+    os.environ.get(
+        "HMAN_TTS_MODEL",
+        str(Path.home() / ".hman" / "tts" / "en_US-amy-medium.onnx"),
+    )
+).expanduser()
+_TTS_DIR = core.HMAN_DIR / "voice_audio"
+_TTS_DIR.mkdir(parents=True, exist_ok=True)
+_TTS_MAX_AGE_S = 60.0
+
+# token → (Path, expires_at_epoch). One-shot; popped on first GET.
+_tts_tokens: dict[str, tuple[Path, float]] = {}
+_tts_lock = threading.Lock()
+
+
+class TranscribeResponse(BaseModel):
+    text: str
+    duration_s: float
+    rms: float
+
+
+class VoiceRespondRequest(BaseModel):
+    text: str
+    context: Optional[str] = None
+
+
+class VoiceRespondResponse(BaseModel):
+    reply: str
+    tts_url: Optional[str] = None
+
+
+def _piper_available() -> bool:
+    """True if Piper CLI is on PATH and a voice model exists locally."""
+    import shutil
+    return shutil.which("piper") is not None and _TTS_MODEL_PATH.exists()
+
+
+def _synthesize_piper(text: str) -> Optional[Path]:
+    """Run piper to a temp wav. Returns the path on success, None on any failure
+    (caller falls back to Web Speech Synthesis on the client)."""
+    if not _piper_available():
+        return None
+    import subprocess
+    out_path = _TTS_DIR / f"reply_{secrets.token_hex(8)}.wav"
+    try:
+        proc = subprocess.run(
+            ["piper", "--model", str(_TTS_MODEL_PATH), "--output_file", str(out_path)],
+            input=text.encode("utf-8"),
+            capture_output=True,
+            timeout=20,
+        )
+        if proc.returncode != 0 or not out_path.exists():
+            return None
+        return out_path
+    except Exception:
+        return None
+
+
+def _gc_tts_tokens() -> None:
+    """Drop expired tokens and unlink their files. Called on each issue."""
+    now = time.time()
+    with _tts_lock:
+        dead = [t for t, (_, exp) in _tts_tokens.items() if exp < now]
+        for t in dead:
+            path, _ = _tts_tokens.pop(t, (None, 0))
+            if path:
+                try:
+                    path.unlink(missing_ok=True)
+                except Exception:
+                    pass
+
+
+def _ollama_chat_sync(prompt: str, context: Optional[str]) -> str:
+    """Blocking Ollama call. Run via asyncio.to_thread() from async handlers
+    so the event loop keeps serving other requests during inference."""
+    import requests
+    messages = []
+    if context:
+        messages.append({"role": "system", "content": context})
+    else:
+        messages.append({
+            "role": "system",
+            "content": (
+                "You are HMAN, the member's local subconscious. Reply briefly "
+                "and in plain spoken language — one or two short sentences. "
+                "Never mention being an AI."
+            ),
+        })
+    messages.append({"role": "user", "content": prompt})
+    r = requests.post(
+        f"{_OLLAMA_URL}/api/chat",
+        json={"model": _VOICE_MODEL, "messages": messages, "stream": False},
+        timeout=60,
+    )
+    r.raise_for_status()
+    body = r.json()
+    return (body.get("message", {}).get("content") or "").strip()
+
+
+@app.post("/api/audio/transcribe", response_model=TranscribeResponse)
+async def audio_transcribe(audio: UploadFile = File(...)):
+    """Transcribe a single push-to-talk blob (webm/opus or wav).
+
+    Returns text + audio stats. Reuses ``core.transcribe_audio``, the
+    same path the ambient audio sensor uses, so the model loads once
+    per process.
+    """
+    audio_np = _decode_audio(audio)
+    result = await asyncio.to_thread(core.transcribe_audio, audio_np)
+    return TranscribeResponse(**result)
+
+
+@app.post("/api/voice/respond", response_model=VoiceRespondResponse)
+async def voice_respond(body: VoiceRespondRequest):
+    """LLM reply for an utterance, optionally with synthesized audio.
+
+    Always returns the reply text. ``tts_url`` is non-null only when
+    Piper is available locally — otherwise the client falls back to
+    Web Speech Synthesis.
+    """
+    if not body.text.strip():
+        raise HTTPException(status_code=400, detail="empty utterance")
+
+    try:
+        reply = await asyncio.to_thread(_ollama_chat_sync, body.text, body.context)
+    except Exception as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"ollama unreachable: {type(e).__name__}: {str(e)[:200]}",
+        )
+    if not reply:
+        reply = "(no reply)"
+
+    tts_url: Optional[str] = None
+    if _piper_available():
+        wav_path = await asyncio.to_thread(_synthesize_piper, reply)
+        if wav_path is not None:
+            tok = secrets.token_urlsafe(24)
+            with _tts_lock:
+                _tts_tokens[tok] = (wav_path, time.time() + _TTS_MAX_AGE_S)
+            _gc_tts_tokens()
+            tts_url = f"/api/voice/audio/{tok}"
+
+    return VoiceRespondResponse(reply=reply, tts_url=tts_url)
+
+
+def _unlink_silent(path: Path) -> None:
+    try:
+        path.unlink(missing_ok=True)
+    except Exception:
+        pass
+
+
+@app.get("/api/voice/audio/{tok}")
+async def voice_audio(tok: str):
+    """One-shot signed audio URL. Token is consumed on first read and the
+    underlying wav is unlinked once streaming completes, so the client
+    must download in one go."""
+    _gc_tts_tokens()
+    with _tts_lock:
+        entry = _tts_tokens.pop(tok, None)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="audio expired or already consumed")
+    path, _exp = entry
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="audio missing on disk")
+    return FileResponse(
+        str(path),
+        media_type="audio/wav",
+        filename=path.name,
+        background=BackgroundTask(_unlink_silent, path),
     )
 
 
