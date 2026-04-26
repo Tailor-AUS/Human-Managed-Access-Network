@@ -113,6 +113,11 @@ export {
   type PendingRequest,
   type VaultSummary,
   type ActivityEntry,
+  // APNs push channel (issue #17)
+  dispatchToAPNs,
+  type DispatchableIntention,
+  type PushDispatchResult,
+  type PushDispatcherConfig,
 } from './messaging/index.js';
 
 // Demo data seeder

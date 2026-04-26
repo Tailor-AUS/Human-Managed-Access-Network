@@ -201,6 +201,59 @@ In the Cloudflare dashboard, add `hman.example.com` as a custom domain on the Pa
 - **Audit log**: append-only, hash-chained. `~/.hman/logs/gate_events.jsonl`.
 - **No inbound ports opened** on your home network in either path.
 
+## APNs auth key (issue #17 — push channel)
+
+The bridge dispatches receptivity-gate consent prompts to the registered
+iPhone via APNs HTTP/2. To do that it needs three Apple-issued
+credentials and the `.p8` auth key file.
+
+### What you need from Apple Developer
+
+1. An **APNs Auth Key (.p8)** generated under Certificates, Identifiers
+   & Profiles → Keys. Note the 10-char `Key ID` shown next to the key.
+2. Your **Team ID** (10 chars, top-right of the Apple Developer portal).
+3. The app **Bundle ID** (`ai.hman.app` by default — match
+   `apps/ios/Package.swift` / your provisioning profile).
+
+### Where the key lives
+
+| Environment | Path / store | Read by |
+|---|---|---|
+| Local dev | `~/.hman/secrets/apns_auth_key.p8` (file mode `0600`) | `api/push.py` via `HMAN_APNS_AUTH_KEY_PATH` |
+| Azure prod | Key Vault secret `APNS-AUTH-KEY` (PEM-encoded) → mounted as a file via Azure App Service Key Vault references, OR fetched at startup by the bridge entrypoint into a `tmpfs` path | `api/push.py` via `HMAN_APNS_AUTH_KEY_PATH` pointing at the mounted/fetched file |
+| Cloudflare prod | Same on-disk file, deployed alongside `bridge.env` (the home machine never publishes it) | `api/push.py` via `HMAN_APNS_AUTH_KEY_PATH` |
+
+### Environment variables consumed by `api/push.py`
+
+| Variable | Purpose | Default |
+|---|---|---|
+| `HMAN_APNS_AUTH_KEY_PATH` | Path to the `.p8` file | `~/.hman/secrets/apns_auth_key.p8` |
+| `HMAN_APNS_KEY_ID` | 10-char Key ID from the Apple Developer portal | _(required)_ |
+| `HMAN_APNS_TEAM_ID` | 10-char Team ID | _(required)_ |
+| `HMAN_APNS_BUNDLE_ID` | App bundle identifier | `ai.hman.app` |
+| `HMAN_APNS_SANDBOX` | `1` to use the sandbox APNs endpoint (TestFlight / dev builds) | `0` |
+| `HMAN_PUSH_TOKEN_PATH` | Where to persist registered device tokens | `~/.hman/vault/push_tokens.json` |
+
+### Rotation
+
+Apple-issued APNs auth keys don't expire, but rotate annually as a
+hygiene practice:
+
+```powershell
+# Generate a new key in the Apple Developer portal, download the .p8
+# Move the new file into ~/.hman/secrets/, then update the key-id env:
+$env:HMAN_APNS_KEY_ID = '<new-10-char-id>'
+# Restart the bridge — Get-ScheduledTask 'HMAN-Bridge' | Restart-…
+```
+
+### What never leaves the bridge
+
+- The `.p8` auth key file (read-only, never logged, never returned in
+  any API response)
+- Full intention payloads (the iOS app fetches them after the user
+  taps; only `intention_id` + a short summary travel through APNs)
+- Bearer tokens (APNs payloads carry application data only)
+
 ## Why Azure vs. Cloudflare
 
 **Azure** is a good fit when:
