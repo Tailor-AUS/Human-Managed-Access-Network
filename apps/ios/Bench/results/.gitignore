@@ -1,0 +1,6 @@
+# Bench results land here as `<candidate>-<deviceModel>-<date>.json`.
+# Most are transient (machine-specific dry runs); the canonical set the
+# published report references lives under `published/` and is committed.
+*.json
+!published/
+!published/**
