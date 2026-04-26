@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+		HealthKit capability. Required by the runtime check in
+		HealthKitProvider.requestAuthorization(). Read-only — HMAN
+		never writes to HealthKit, so we don't need the
+		health-records key.
+
+		Background delivery (`com.apple.developer.healthkit.background-delivery`)
+		is intentionally omitted; the receptivity gate polls on a
+		60-second cadence while the app is foregrounded, which is
+		enough for v1. A follow-up PR can add background delivery
+		once we have a clearer story for member-controlled cadence.
+	-->
+	<key>com.apple.developer.healthkit</key>
+	<true/>
+</dict>
+</plist>

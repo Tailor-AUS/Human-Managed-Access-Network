@@ -45,7 +45,15 @@ let package = Package(
                 .product(name: "Clibsodium", package: "swift-sodium"),
                 .product(name: "KeychainAccess", package: "KeychainAccess"),
             ],
-            path: "Sources/HMAN"
+            path: "Sources/HMAN",
+            // Info.plist + entitlements are consumed by the host
+            // .xcodeproj / xcodebuild layer (#16 onward), not by the
+            // SwiftPM library itself. Exclude them so `swift build`
+            // doesn't try to copy them as resources.
+            exclude: [
+                "Resources/Info.plist",
+                "HMAN.entitlements",
+            ]
         ),
         .testTarget(
             name: "HMANTests",
