@@ -59,13 +59,19 @@ let package = Package(
                 .product(name: "KeychainAccess", package: "KeychainAccess"),
             ],
             path: "Sources/HMAN",
-            // Info.plist + entitlements are consumed by the host
-            // .xcodeproj / xcodebuild layer (#16 onward), not by the
-            // SwiftPM library itself. Exclude them so `swift build`
-            // doesn't try to copy them as resources.
+            // Excludes:
+            // - Info.plist + entitlements: consumed by the host .xcodeproj /
+            //   xcodebuild, not by the SwiftPM library itself.
+            // - Biometric/Resources/: holds the Resemblyzer CoreML model
+            //   placeholder (#18). Once the real Resemblyzer.mlmodel lands
+            //   locally the SPM build will compile it to .mlmodelc and bundle
+            //   automatically; keeping the placeholder + README out of the
+            //   resources pipeline avoids SPM choking on non-asset files.
             exclude: [
                 "Resources/Info.plist",
                 "HMAN.entitlements",
+                "Biometric/Resources/Resemblyzer.mlmodel.placeholder",
+                "Biometric/README.md",
             ]
         ),
         .testTarget(
