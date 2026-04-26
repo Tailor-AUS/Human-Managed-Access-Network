@@ -26,7 +26,37 @@ export default {
           locked: '#ef4444',
         },
       },
+      // iOS notch / home-indicator safe-area utilities. Use as `pt-safe`,
+      // `pb-safe`, `pl-safe`, `pr-safe`, or stack with regular padding e.g.
+      // `pb-[calc(env(safe-area-inset-bottom)+1rem)]`.
+      spacing: {
+        safe: 'env(safe-area-inset-bottom)',
+        'safe-t': 'env(safe-area-inset-top)',
+        'safe-b': 'env(safe-area-inset-bottom)',
+        'safe-l': 'env(safe-area-inset-left)',
+        'safe-r': 'env(safe-area-inset-right)',
+      },
     },
   },
-  plugins: [],
+  plugins: [
+    function ({ addUtilities }) {
+      addUtilities({
+        '.pt-safe': { paddingTop: 'env(safe-area-inset-top)' },
+        '.pb-safe': { paddingBottom: 'env(safe-area-inset-bottom)' },
+        '.pl-safe': { paddingLeft: 'env(safe-area-inset-left)' },
+        '.pr-safe': { paddingRight: 'env(safe-area-inset-right)' },
+        '.px-safe': {
+          paddingLeft: 'env(safe-area-inset-left)',
+          paddingRight: 'env(safe-area-inset-right)',
+        },
+        '.py-safe': {
+          paddingTop: 'env(safe-area-inset-top)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        },
+        '.mb-safe': { marginBottom: 'env(safe-area-inset-bottom)' },
+        '.mt-safe': { marginTop: 'env(safe-area-inset-top)' },
+        '.bottom-safe': { bottom: 'env(safe-area-inset-bottom)' },
+      })
+    },
+  ],
 }
