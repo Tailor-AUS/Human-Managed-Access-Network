@@ -881,6 +881,11 @@ async def voice_audio(tok: str):
 
 import sensors as _sensors  # noqa: E402
 
+# APNs push channel (issue #17). Mounted as a sub-router so its routes
+# pick up the same auth + CORS middleware as everything else.
+import push as _push  # noqa: E402
+app.include_router(_push.router)
+
 
 # Every sensor read endpoint runs the sensor's status()/recent() under
 # asyncio.to_thread. These methods are sync and may touch deques or do

@@ -109,6 +109,48 @@ public final class HMANBridgeClient: @unchecked Sendable {
         return try await post("/api/enrollment/session", body: Body(passphrase: passphrase, memberId: memberId))
     }
 
+    // ── APNs push (issue #17) ───────────────────────────────────────
+    //
+    // Two endpoints live here: token registration and intention decisions.
+    // The third — `POST /api/push/send` — is **not** exposed to the iOS
+    // surface. Only the receptivity gate (server-side) ever calls it.
+
+    /// `POST /api/push/register` — uploads this device's APNs token so
+    /// the bridge can address us by `memberId`. Idempotent: callable on
+    /// every launch; the bridge updates the stored token if it changed.
+    @discardableResult
+    public func registerPushToken(deviceToken: String, memberId: String) async throws -> PushRegisterResponse {
+        struct Body: Encodable {
+            let deviceToken: String
+            let memberId: String
+        }
+        return try await post(
+            "/api/push/register",
+            body: Body(deviceToken: deviceToken, memberId: memberId)
+        )
+    }
+
+    /// `POST /api/intentions/{id}/decide` — records the member's Approve
+    /// or Deny verdict on a receptivity-gate prompt. The connector that
+    /// owns the intention picks up the decision asynchronously.
+    @discardableResult
+    public func decideIntention(
+        id: String,
+        decision: IntentionDecision,
+        channel: IntentionDecisionChannel
+    ) async throws -> IntentionDecisionResponse {
+        struct Body: Encodable {
+            let decision: IntentionDecision
+            let channel: IntentionDecisionChannel
+        }
+        // URL-path interpolation: id is a uuid in practice, but pass through `addingPercentEncoding` for safety.
+        let escaped = id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id
+        return try await post(
+            "/api/intentions/\(escaped)/decide",
+            body: Body(decision: decision, channel: channel)
+        )
+    }
+
     // ── Token management (delegates to the configured store) ────────
 
     public func setBearerToken(_ token: String?) throws {
