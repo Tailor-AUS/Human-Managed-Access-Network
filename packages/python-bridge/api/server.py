@@ -21,6 +21,7 @@ import sys
 import threading
 import time
 from collections import deque
+from contextlib import asynccontextmanager
 from dataclasses import asdict, is_dataclass
 from datetime import datetime
 from pathlib import Path
@@ -37,7 +38,41 @@ from pydantic import BaseModel
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import core  # noqa: E402
 
-app = FastAPI(title=".HMAN Member Bridge", version="0.1.0")
+
+# ── Lifespan: auto-start sensors on boot ────────────────────────────
+#
+# Issue #21: every bridge restart used to leave all sensors idle until
+# someone hit /api/sensors/start_all. Now we kick start_all ourselves
+# at startup, but in a background thread so uvicorn's "ready" signal
+# doesn't wait on Whisper's first-load (~5s) or the EEG BLE handshake
+# (~20s timeout). The /api/health probe stays responsive throughout.
+#
+# Per-sensor opt-out is honoured via env (HMAN_SENSOR_<NAME>=off) and
+# ~/.hman/sensors.yaml — see config.py.
+
+@asynccontextmanager
+async def lifespan(_app: "FastAPI"):
+    # Import here so a circular-import or missing-sensor-dep can't kill
+    # the whole bridge before we even reach the startup hook.
+    try:
+        import sensors as _s
+        threading.Thread(
+            target=_s.autostart_all,
+            name="hman-sensor-autostart",
+            daemon=True,
+        ).start()
+    except Exception as e:
+        # Last-resort net: a bug in autostart wiring must NEVER block
+        # the bridge from coming up. Voice enrollment / Gate 5 stay
+        # functional even if the subconscious never starts.
+        print(f"[startup] sensor auto-start scheduling failed: {e}")
+        traceback.print_exc()
+    yield
+    # No shutdown work — daemon threads die with the process. Existing
+    # /api/sensors/stop_all is still available for graceful teardown.
+
+
+app = FastAPI(title=".HMAN Member Bridge", version="0.1.0", lifespan=lifespan)
 
 # Allowed origins:
 #   dev (localhost)
