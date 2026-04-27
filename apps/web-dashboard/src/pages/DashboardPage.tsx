@@ -13,6 +13,7 @@ import {
   XCircle,
 } from 'lucide-react'
 import { hman, type Health, type GatesResponse } from '../lib/hman'
+import { VoicePTT } from '../components/VoicePTT'
 
 export function DashboardPage() {
   const [health, setHealth] = useState<Health | null>(null)
@@ -203,6 +204,12 @@ export function DashboardPage() {
         "These five gates will tell you if .HMAN is actually working as intended, or if it's
         just another surveillance device wearing a friendly mask."
       </p>
+
+      {/* Push-to-talk loop (issue #9). Only mount when the bridge is
+          reachable — pointless otherwise, and the recorder permission
+          prompt is jarring on a broken page. iOS background-audio
+          limitation is documented in VoicePTT.tsx. */}
+      {health && !error && <VoicePTT floating />}
     </div>
   )
 }
