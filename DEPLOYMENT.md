@@ -218,6 +218,50 @@ Pick based on your threat model and existing infrastructure. Both paths are main
 
 ---
 
+## Sensor auto-start
+
+The bridge auto-starts every available sensor on boot — no need to call `POST /api/sensors/start_all` after a restart. The startup hook spawns a background thread so `uvicorn` is ready immediately; sensors come online a few seconds later as Whisper / BLE / etc. finish initialising.
+
+Per-sensor opt-out (env wins over YAML; default is `on`):
+
+```powershell
+# PowerShell — set before launching the bridge
+$env:HMAN_SENSOR_EEG = 'off'        # disable EEG (e.g. Muse not handy)
+$env:HMAN_SENSOR_AUDIO = 'on'       # explicit on (same as default)
+$env:HMAN_SENSOR_KEYSTROKES = 'off'
+$env:HMAN_SENSOR_SCREEN = 'on'
+```
+
+```bash
+# bash — same idea
+export HMAN_SENSOR_EEG=off
+```
+
+Or, equivalently, drop a YAML file at `~/.hman/sensors.yaml` (uses `HMAN_DATA_DIR` if set):
+
+```yaml
+sensors:
+  audio: on
+  eeg: off          # disabled until Muse is fixed
+  keystrokes: on
+  screen: on
+```
+
+Truthy values: `on`, `true`, `yes`, `1`, `enabled`. Falsy: `off`, `false`, `no`, `0`, `disabled`. Anything else is treated as "no opinion" and falls through to the next layer (env > yaml > default).
+
+Boot logs make the decision visible:
+
+```
+[sensor:audio] auto-started
+[sensor:keystrokes] auto-started
+[sensor:eeg] auto-start disabled by config (env)
+[sensor:screen] not available, skipping auto-start
+```
+
+If a sensor fails to start (e.g. Muse can't be found, mic device disappeared) the bridge keeps running — the failure is recorded in that sensor's `last_error` and surfaced in the Subconscious dashboard. The existing manual `/api/sensors/{name}/start` and `/api/sensors/start_all` endpoints still work for runtime toggling.
+
+---
+
 ## What's not yet prod-ready
 
 Flagging honestly:
