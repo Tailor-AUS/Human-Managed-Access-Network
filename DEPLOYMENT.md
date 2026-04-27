@@ -84,18 +84,51 @@ bridge     CNAME  <your-relay-namespace>.servicebus.windows.net
 
 ### Run the local side
 
-One-time bootstrap of the Windows auto-start task (run in **Admin** PowerShell):
+The **recommended** path on Windows installs the bridge + Azure Relay listener as real Windows services using a vendored copy of [NSSM](https://nssm.cc/) (Non-Sucking Service Manager, public domain — see `ops/nssm/LICENSE-NSSM.txt`). NSSM-wrapped services live in `services.msc`, auto-start before login, restart on failure, and survive accidental window closure / log-out / lock — fixing the silent-death failure mode of the older Task Scheduler approach (#19).
+
+Bootstrap once (run in **Admin** PowerShell — service install requires elevation):
 
 ```powershell
-pwsh -File ops/install-windows-service.ps1 -Tunnel azure
+# 1. Build the relay listener if you haven't already
+cd packages/bridge-relay-listener
+dotnet publish -c Release -r win-x64 --self-contained false
+cd ../..
+
+# 2. Make sure the Python venv is bootstrapped
+cd packages/python-bridge
+python -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
+cd ../..
+
+# 3. Install the services (current user, azure tunnel)
+pwsh -File ops/install-windows-service.ps1 -Tunnel azure -Password (Read-Host -AsSecureString -Prompt 'Windows password')
 ```
 
-This registers a Task Scheduler job that, at every login:
-- starts the Python FastAPI bridge (`127.0.0.1:8765`)
-- starts the .NET Relay listener (`packages/bridge-relay-listener/hman-bridge-relay.exe`) which connects outbound to your Hybrid Connection
-- restarts both on failure
+This registers two NSSM-wrapped services that start at boot:
+
+| Service | Wraps | Notes |
+|---|---|---|
+| `HMAN-Bridge` | `.venv\Scripts\python.exe api/server.py` | depends on `bthserv` so EEG works post-reboot |
+| `HMAN-Relay` | `bin/Release/net9.0/win-x64/publish/hman-bridge-relay.exe` | only installed when `-Tunnel azure` |
+
+Both services:
+- run under the **member's user account** (NOT LocalSystem) so they can read `~/.hman/`, the encrypted voice reference, and use BLE / microphone APIs
+- auto-restart on failure with a 10s throttle
+- log stdout/stderr to `~/.hman/logs/<svc>.service.{log,err}`, rotated at 50 MB
+
+The script is idempotent — running it again reconfigures in place rather than failing.
 
 First launch reads `~/.hman/bridge.env` (populated by the deploy script) for the Relay creds and the `HMAN_AUTH_TOKEN`. The token is also printed once so you can paste it into the web dashboard when it prompts.
+
+To remove both services:
+
+```powershell
+pwsh -File ops/uninstall-windows-service.ps1
+```
+
+#### Dev / one-shot mode (no service install)
+
+If you just want to run the bridge in the foreground for a single session — e.g. while iterating on a sensor — `ops/start-bridge.ps1 -Tunnel azure` still works and does not require admin. Both processes die when their console windows close, which is exactly the failure mode the service install exists to avoid, so don't use this for production.
 
 ### First visit
 
@@ -119,10 +152,9 @@ First launch reads `~/.hman/bridge.env` (populated by the deploy script) for the
 $newToken = -join ((1..48) | % { '{0:x}' -f (Get-Random -Maximum 16) })
 az keyvault secret set --vault-name kv-hman-<suffix> --name 'HMAN-AUTH-TOKEN' --value $newToken
 
-# Update local bridge.env then restart the service
-Stop-ScheduledTask -TaskName 'HMAN-Bridge'
-# edit ~/.hman/bridge.env → HMAN_AUTH_TOKEN=<newToken>
-Start-ScheduledTask -TaskName 'HMAN-Bridge'
+# Update local bridge.env then restart the services
+Restart-Service -Name 'HMAN-Bridge', 'HMAN-Relay'
+# edit ~/.hman/bridge.env → HMAN_AUTH_TOKEN=<newToken>  before the restart, or restart again after
 
 # Members paste the new token in the web UI (they're prompted automatically on next 401)
 ```
@@ -169,8 +201,14 @@ npx wrangler login
 npx wrangler pages project create hman --production-branch main
 npm run deploy:cloudflare
 
-# 4. Register the Windows auto-start task (Admin PowerShell)
-pwsh -File ops/install-windows-service.ps1 -Tunnel cloudflare
+# 4. Register the Windows services (Admin PowerShell)
+#    Note: -Tunnel cloudflare is not yet wrapped as a service — for now,
+#    install the bridge as a service and run cloudflared separately
+#    (winget install Cloudflare.cloudflared installs cloudflared as a
+#    service of its own). Or stay on dev mode:
+pwsh -File ops/install-windows-service.ps1 -Tunnel none -Password (Read-Host -AsSecureString -Prompt 'Windows password')
+# then in a separate terminal:
+cloudflared tunnel run hman-bridge
 ```
 
 In the Cloudflare dashboard, add `hman.example.com` as a custom domain on the Pages project.
