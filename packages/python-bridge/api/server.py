@@ -950,6 +950,143 @@ async def sensors_stop_all():
     return await asyncio.to_thread(_stop_all_sensors)
 
 
+# ── Receptivity gate ────────────────────────────────────────────────
+#
+# Channel-aware consent gate: decides *when* and *how* to surface a
+# pending intention to the member (voice whisper / Signal text / queue).
+
+import receptivity as _receptivity  # noqa: E402
+
+
+class IntentionIn(BaseModel):
+    id: str
+    description: str
+    urgency: str = "normal"          # low | normal | high | critical
+    source: str = "unknown"
+    context: Optional[str] = None
+    estimated_voice_words: int = 15
+
+
+class SensorStateIn(BaseModel):
+    """Optional snapshot the caller can supply.  When omitted the bridge
+    reads the live sensor singletons via ``aggregate_signals()``."""
+    idle_seconds: Optional[float] = None
+    typing_wpm: Optional[float] = None
+    active_app: Optional[str] = None
+    screen_locked: Optional[bool] = None
+    signal_active: Optional[bool] = None
+    room_rms: Optional[float] = None
+    speech_active: Optional[bool] = None
+    in_meeting: Optional[bool] = None
+    confidence: float = 0.0
+
+
+class EvaluateRequest(BaseModel):
+    intention: IntentionIn
+    sensor_state: Optional[SensorStateIn] = None  # None → use live sensors
+
+
+class GateDecisionOut(BaseModel):
+    surface_now: bool
+    channel: str           # "voice" | "text" | "queue"
+    reason: str
+    score: float
+    budget_words_remaining: int
+    budget_interruptions_today: int
+
+
+class BudgetOut(BaseModel):
+    daily_word_limit: int
+    words_used_today: int
+    words_remaining: int
+    interruptions_today: int
+    max_interruptions: int
+    budget_exhausted: bool
+
+
+class RecordVoiceUsageIn(BaseModel):
+    words: int
+
+
+@app.post("/api/receptivity/evaluate", response_model=GateDecisionOut)
+def receptivity_evaluate(body: EvaluateRequest):
+    """Evaluate whether to surface *intention* right now and through which channel.
+
+    The caller (e.g. PACT-GitHub connector) passes an ``Intention`` and
+    optionally a ``SensorState``.  When ``sensor_state`` is omitted the
+    bridge reads the live sensor singletons.
+
+    Returns a ``GateDecision`` plus current budget metadata.
+    """
+    intention = _receptivity.Intention(
+        id=body.intention.id,
+        description=body.intention.description,
+        urgency=body.intention.urgency,  # type: ignore[arg-type]
+        source=body.intention.source,
+        context=body.intention.context,
+        estimated_voice_words=body.intention.estimated_voice_words,
+    )
+
+    if body.sensor_state is not None:
+        sensor_state = _receptivity.SensorState(
+            idle_seconds=body.sensor_state.idle_seconds,
+            typing_wpm=body.sensor_state.typing_wpm,
+            active_app=body.sensor_state.active_app,
+            screen_locked=body.sensor_state.screen_locked,
+            signal_active=body.sensor_state.signal_active,
+            room_rms=body.sensor_state.room_rms,
+            speech_active=body.sensor_state.speech_active,
+            in_meeting=body.sensor_state.in_meeting,
+            confidence=body.sensor_state.confidence,
+        )
+    else:
+        sensor_state = _receptivity.aggregate_signals()
+
+    budget = _receptivity.load_budget()
+    decision = _receptivity.receptivity_gate(intention, sensor_state, budget)
+
+    return GateDecisionOut(
+        surface_now=decision.surface_now,
+        channel=decision.channel,
+        reason=decision.reason,
+        score=decision.score,
+        budget_words_remaining=budget.words_remaining,
+        budget_interruptions_today=budget.interruptions_today,
+    )
+
+
+@app.get("/api/receptivity/budget", response_model=BudgetOut)
+def receptivity_budget():
+    """Return the current daily voice-word budget."""
+    b = _receptivity.load_budget()
+    return BudgetOut(
+        daily_word_limit=b.daily_word_limit,
+        words_used_today=b.words_used_today,
+        words_remaining=b.words_remaining,
+        interruptions_today=b.interruptions_today,
+        max_interruptions=b.max_interruptions,
+        budget_exhausted=b.budget_exhausted,
+    )
+
+
+@app.post("/api/receptivity/budget/use", response_model=BudgetOut)
+def receptivity_budget_use(body: RecordVoiceUsageIn):
+    """Record *words* spoken aloud and increment the interruption counter.
+
+    Call this after each successful voice whisper so the daily budget
+    stays accurate.
+    """
+    updated = _receptivity.record_voice_usage(body.words)
+    return BudgetOut(
+        daily_word_limit=updated.daily_word_limit,
+        words_used_today=updated.words_used_today,
+        words_remaining=updated.words_remaining,
+        interruptions_today=updated.interruptions_today,
+        max_interruptions=updated.max_interruptions,
+        budget_exhausted=updated.budget_exhausted,
+    )
+
+
 # ── Dev entrypoint ──────────────────────────────────────────────────
 
 if __name__ == "__main__":
