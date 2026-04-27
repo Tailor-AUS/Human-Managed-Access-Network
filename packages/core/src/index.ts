@@ -141,6 +141,11 @@ export {
   type PendingRequest,
   type VaultSummary,
   type ActivityEntry,
+  // APNs push channel (issue #17)
+  dispatchToAPNs,
+  type DispatchableIntention,
+  type PushDispatchResult,
+  type PushDispatcherConfig,
 } from './messaging/index.js';
 
 // Demo data seeder
@@ -253,3 +258,27 @@ export {
   type DataRequest,
   type DataResponse,
 } from './bridge.js';
+
+// Connectors module - external actions HMAN takes on a member's behalf
+// Note: ``ExecutionResult`` and ``GateDecision`` are also exported from
+// services/access; we re-export the connector-flavoured ones under
+// distinct aliases so callers can reach for either without ambiguity.
+export {
+  GitHubConnector,
+  hashIntention,
+  renderAttestationBlock,
+  signAttestation,
+  parseDraftReply,
+  OllamaLLMClient,
+  FetchGitHubClient,
+  type Connector,
+  type Intention,
+  type ExecutionResult as ConnectorExecutionResult,
+  type PACTAttestation,
+  type ReceptivityGate,
+  type GateDecision as ReceptivityGateDecision,
+  type GitHubIssuePayload,
+  type GitHubConnectorConfig,
+  type LLMClient,
+  type GitHubClient,
+} from './connectors/index.js';

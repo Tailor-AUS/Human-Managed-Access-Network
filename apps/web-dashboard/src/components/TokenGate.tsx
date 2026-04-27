@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { KeyRound, ShieldAlert } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { KeyRound, ShieldAlert, Smartphone } from 'lucide-react'
 import { hman, token } from '../lib/hman'
 
 // Wraps the member app. On first load, probes /api/health.
@@ -96,6 +97,19 @@ export function TokenGate({ children }: { children: React.ReactNode }) {
           <code className="mx-1 px-1 rounded bg-background-secondary">HMAN_AUTH_TOKEN</code>
           in the terminal where you launched it, or in your <code>.env</code>.
         </p>
+
+        <div className="mt-6 pt-6 border-t border-border">
+          <Link
+            to="/pair"
+            className="inline-flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300"
+          >
+            <Smartphone className="w-4 h-4" />
+            Pair via phone instead
+          </Link>
+          <p className="text-xs text-text-secondary mt-1.5">
+            Scan a QR code from this dashboard with your phone to transfer the token automatically.
+          </p>
+        </div>
       </div>
     )
   }

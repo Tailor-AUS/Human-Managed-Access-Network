@@ -231,18 +231,18 @@ export function AuditPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold">Audit Log</h1>
-          <p className="text-gray-400">Complete history of all vault activity</p>
+          <p className="text-gray-400 text-base">Complete history of all vault activity</p>
         </div>
-        <button className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 font-medium hover:bg-background-tertiary">
+        <button className="min-h-11 flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 font-medium hover:bg-background-tertiary text-base">
           <Download className="h-5 w-5" />
           Export
         </button>
       </div>
 
       {/* Stats */}
-      <div className="flex gap-6">
+      <div className="flex flex-wrap gap-4 sm:gap-6">
         <div className="flex items-center gap-2">
           <CheckCircle className="h-5 w-5 text-level-open" />
           <span className="text-sm">
@@ -268,16 +268,16 @@ export function AuditPage() {
             placeholder="Search audit log..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-lg border border-border bg-surface py-3 pl-10 pr-4 text-white placeholder-gray-400 focus:border-primary focus:outline-none"
+            className="w-full min-h-11 rounded-lg border border-border bg-surface py-3 pl-10 pr-4 text-base text-white placeholder-gray-400 focus:border-primary focus:outline-none"
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Filter className="h-5 w-5 text-gray-400 flex-shrink-0" />
           {(['all', 'access', 'changes', 'security'] as FilterType[]).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+              className={`min-h-11 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                 filter === f
                   ? 'bg-primary text-white'
                   : 'bg-surface text-gray-400 hover:text-white'
@@ -289,8 +289,8 @@ export function AuditPage() {
         </div>
       </div>
 
-      {/* Audit Log Table */}
-      <div className="rounded-xl border border-border bg-surface overflow-hidden">
+      {/* Audit Log — desktop table (md+) */}
+      <div className="hidden md:block rounded-xl border border-border bg-surface overflow-hidden">
         <table className="w-full">
           <thead className="border-b border-border bg-background-secondary">
             <tr>
@@ -340,7 +340,7 @@ export function AuditPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-primary">
+                    <span className="text-primary break-all">
                       {entry.resourceUri.replace('hman://', '')}
                     </span>
                   </td>
@@ -355,6 +355,58 @@ export function AuditPage() {
 
         {filteredEntries.length === 0 && (
           <div className="p-12 text-center">
+            <Shield className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-4 font-semibold">No entries found</h3>
+            <p className="mt-2 text-sm text-gray-400">
+              Try adjusting your search or filter criteria
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Audit Log — mobile cards (below md) */}
+      <div className="md:hidden space-y-3">
+        {filteredEntries.map((entry) => {
+          const ActionIcon = getActionIcon(entry.action)
+          const ActorIcon = getActorIcon(entry.actorType)
+          const colorClass = getActionColor(entry.action, entry.success)
+
+          return (
+            <div
+              key={entry.id}
+              className="rounded-xl border border-border bg-surface p-4"
+            >
+              <div className="flex items-start gap-3">
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${colorClass}`}
+                >
+                  <ActionIcon className="h-5 w-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium break-words">
+                    {formatActionLabel(entry.action)}
+                  </div>
+                  {entry.details && (
+                    <div className="text-sm text-gray-400 break-words">{entry.details}</div>
+                  )}
+                  <div className="mt-2 flex items-center gap-2 text-sm">
+                    <ActorIcon className="h-4 w-4 text-gray-400 shrink-0" />
+                    <span className="truncate">{entry.actorName}</span>
+                  </div>
+                  <div className="mt-1 text-sm text-primary break-all">
+                    {entry.resourceUri.replace('hman://', '')}
+                  </div>
+                  <div className="mt-1 text-xs text-gray-400">
+                    {formatTimestamp(entry.timestamp)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+
+        {filteredEntries.length === 0 && (
+          <div className="rounded-xl border border-border bg-surface p-12 text-center">
             <Shield className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-4 font-semibold">No entries found</h3>
             <p className="mt-2 text-sm text-gray-400">

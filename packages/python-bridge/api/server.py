@@ -13,6 +13,7 @@ surface.
 """
 from __future__ import annotations
 
+import asyncio
 import io
 import json
 import os
@@ -21,6 +22,7 @@ import sys
 import threading
 import time
 from collections import deque
+from contextlib import asynccontextmanager
 from dataclasses import asdict, is_dataclass
 from datetime import datetime
 from pathlib import Path
@@ -30,14 +32,49 @@ import numpy as np
 import traceback
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from starlette.background import BackgroundTask
 from pydantic import BaseModel
 
 # Make sibling module importable when run as script (api/server.py → ../core.py)
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import core  # noqa: E402
 
-app = FastAPI(title=".HMAN Member Bridge", version="0.1.0")
+
+# ── Lifespan: auto-start sensors on boot ────────────────────────────
+#
+# Issue #21: every bridge restart used to leave all sensors idle until
+# someone hit /api/sensors/start_all. Now we kick start_all ourselves
+# at startup, but in a background thread so uvicorn's "ready" signal
+# doesn't wait on Whisper's first-load (~5s) or the EEG BLE handshake
+# (~20s timeout). The /api/health probe stays responsive throughout.
+#
+# Per-sensor opt-out is honoured via env (HMAN_SENSOR_<NAME>=off) and
+# ~/.hman/sensors.yaml — see config.py.
+
+@asynccontextmanager
+async def lifespan(_app: "FastAPI"):
+    # Import here so a circular-import or missing-sensor-dep can't kill
+    # the whole bridge before we even reach the startup hook.
+    try:
+        import sensors as _s
+        threading.Thread(
+            target=_s.autostart_all,
+            name="hman-sensor-autostart",
+            daemon=True,
+        ).start()
+    except Exception as e:
+        # Last-resort net: a bug in autostart wiring must NEVER block
+        # the bridge from coming up. Voice enrollment / Gate 5 stay
+        # functional even if the subconscious never starts.
+        print(f"[startup] sensor auto-start scheduling failed: {e}")
+        traceback.print_exc()
+    yield
+    # No shutdown work — daemon threads die with the process. Existing
+    # /api/sensors/stop_all is still available for graceful teardown.
+
+
+app = FastAPI(title=".HMAN Member Bridge", version="0.1.0", lifespan=lifespan)
 
 # Allowed origins:
 #   dev (localhost)
@@ -62,7 +99,16 @@ app.add_middleware(
 # closed when reachable over a tunnel or public URL.
 _AUTH_TOKEN = os.environ.get("HMAN_AUTH_TOKEN", "").strip() or None
 
-_PUBLIC_PATHS = {"/", "/openapi.json", "/docs", "/redoc", "/docs/oauth2-redirect"}
+_PUBLIC_PATHS = {
+    "/",
+    "/openapi.json",
+    "/docs",
+    "/redoc",
+    "/docs/oauth2-redirect",
+    # QR-pairing endpoints — phone has no token yet, that's the whole point
+    "/api/pair/begin",
+    "/api/pair/redeem",
+}
 
 
 def _cors_headers_for(origin: str | None) -> dict[str, str]:
@@ -633,6 +679,200 @@ def gates():
     )
 
 
+# ── In-PWA voice loop (Wave 1, issue #9) ────────────────────────────
+#
+# Push-to-talk in the web dashboard:
+#     MediaRecorder webm/opus blob
+#  →  POST /api/audio/transcribe         (faster-whisper)
+#  →  POST /api/voice/respond            (Ollama → reply text + optional Piper TTS)
+#  →  GET  /api/voice/audio/{token}      (one-shot signed URL, ~60s)
+#
+# Foreground only on iOS — that's a known PWA constraint and Wave 1
+# explicitly accepts it. Background capture is Wave 2 (native).
+#
+# TTS: if a Piper ONNX voice is present at $HMAN_TTS_MODEL (or
+# ~/.hman/tts/en_US-amy-medium.onnx by default) AND the `piper-tts`
+# CLI is on PATH, /api/voice/respond will synthesize and return a
+# tts_url. Otherwise tts_url is null and the frontend falls back to
+# Web Speech Synthesis (window.speechSynthesis). Either path is
+# acceptable for v1.
+
+_VOICE_MODEL = os.environ.get("HMAN_VOICE_MODEL", "llama3.2:3b").strip() or "llama3.2:3b"
+_OLLAMA_URL = os.environ.get("HMAN_OLLAMA_URL", "http://localhost:11434").rstrip("/")
+_TTS_MODEL_PATH = Path(
+    os.environ.get(
+        "HMAN_TTS_MODEL",
+        str(Path.home() / ".hman" / "tts" / "en_US-amy-medium.onnx"),
+    )
+).expanduser()
+_TTS_DIR = core.HMAN_DIR / "voice_audio"
+_TTS_DIR.mkdir(parents=True, exist_ok=True)
+_TTS_MAX_AGE_S = 60.0
+
+# token → (Path, expires_at_epoch). One-shot; popped on first GET.
+_tts_tokens: dict[str, tuple[Path, float]] = {}
+_tts_lock = threading.Lock()
+
+
+class TranscribeResponse(BaseModel):
+    text: str
+    duration_s: float
+    rms: float
+
+
+class VoiceRespondRequest(BaseModel):
+    text: str
+    context: Optional[str] = None
+
+
+class VoiceRespondResponse(BaseModel):
+    reply: str
+    tts_url: Optional[str] = None
+
+
+def _piper_available() -> bool:
+    """True if Piper CLI is on PATH and a voice model exists locally."""
+    import shutil
+    return shutil.which("piper") is not None and _TTS_MODEL_PATH.exists()
+
+
+def _synthesize_piper(text: str) -> Optional[Path]:
+    """Run piper to a temp wav. Returns the path on success, None on any failure
+    (caller falls back to Web Speech Synthesis on the client)."""
+    if not _piper_available():
+        return None
+    import subprocess
+    out_path = _TTS_DIR / f"reply_{secrets.token_hex(8)}.wav"
+    try:
+        proc = subprocess.run(
+            ["piper", "--model", str(_TTS_MODEL_PATH), "--output_file", str(out_path)],
+            input=text.encode("utf-8"),
+            capture_output=True,
+            timeout=20,
+        )
+        if proc.returncode != 0 or not out_path.exists():
+            return None
+        return out_path
+    except Exception:
+        return None
+
+
+def _gc_tts_tokens() -> None:
+    """Drop expired tokens and unlink their files. Called on each issue."""
+    now = time.time()
+    with _tts_lock:
+        dead = [t for t, (_, exp) in _tts_tokens.items() if exp < now]
+        for t in dead:
+            path, _ = _tts_tokens.pop(t, (None, 0))
+            if path:
+                try:
+                    path.unlink(missing_ok=True)
+                except Exception:
+                    pass
+
+
+def _ollama_chat_sync(prompt: str, context: Optional[str]) -> str:
+    """Blocking Ollama call. Run via asyncio.to_thread() from async handlers
+    so the event loop keeps serving other requests during inference."""
+    import requests
+    messages = []
+    if context:
+        messages.append({"role": "system", "content": context})
+    else:
+        messages.append({
+            "role": "system",
+            "content": (
+                "You are HMAN, the member's local subconscious. Reply briefly "
+                "and in plain spoken language — one or two short sentences. "
+                "Never mention being an AI."
+            ),
+        })
+    messages.append({"role": "user", "content": prompt})
+    r = requests.post(
+        f"{_OLLAMA_URL}/api/chat",
+        json={"model": _VOICE_MODEL, "messages": messages, "stream": False},
+        timeout=60,
+    )
+    r.raise_for_status()
+    body = r.json()
+    return (body.get("message", {}).get("content") or "").strip()
+
+
+@app.post("/api/audio/transcribe", response_model=TranscribeResponse)
+async def audio_transcribe(audio: UploadFile = File(...)):
+    """Transcribe a single push-to-talk blob (webm/opus or wav).
+
+    Returns text + audio stats. Reuses ``core.transcribe_audio``, the
+    same path the ambient audio sensor uses, so the model loads once
+    per process.
+    """
+    audio_np = _decode_audio(audio)
+    result = await asyncio.to_thread(core.transcribe_audio, audio_np)
+    return TranscribeResponse(**result)
+
+
+@app.post("/api/voice/respond", response_model=VoiceRespondResponse)
+async def voice_respond(body: VoiceRespondRequest):
+    """LLM reply for an utterance, optionally with synthesized audio.
+
+    Always returns the reply text. ``tts_url`` is non-null only when
+    Piper is available locally — otherwise the client falls back to
+    Web Speech Synthesis.
+    """
+    if not body.text.strip():
+        raise HTTPException(status_code=400, detail="empty utterance")
+
+    try:
+        reply = await asyncio.to_thread(_ollama_chat_sync, body.text, body.context)
+    except Exception as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"ollama unreachable: {type(e).__name__}: {str(e)[:200]}",
+        )
+    if not reply:
+        reply = "(no reply)"
+
+    tts_url: Optional[str] = None
+    if _piper_available():
+        wav_path = await asyncio.to_thread(_synthesize_piper, reply)
+        if wav_path is not None:
+            tok = secrets.token_urlsafe(24)
+            with _tts_lock:
+                _tts_tokens[tok] = (wav_path, time.time() + _TTS_MAX_AGE_S)
+            _gc_tts_tokens()
+            tts_url = f"/api/voice/audio/{tok}"
+
+    return VoiceRespondResponse(reply=reply, tts_url=tts_url)
+
+
+def _unlink_silent(path: Path) -> None:
+    try:
+        path.unlink(missing_ok=True)
+    except Exception:
+        pass
+
+
+@app.get("/api/voice/audio/{tok}")
+async def voice_audio(tok: str):
+    """One-shot signed audio URL. Token is consumed on first read and the
+    underlying wav is unlinked once streaming completes, so the client
+    must download in one go."""
+    _gc_tts_tokens()
+    with _tts_lock:
+        entry = _tts_tokens.pop(tok, None)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="audio expired or already consumed")
+    path, _exp = entry
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="audio missing on disk")
+    return FileResponse(
+        str(path),
+        media_type="audio/wav",
+        filename=path.name,
+        background=BackgroundTask(_unlink_silent, path),
+    )
+
+
 # ── Sensors (the subconscious) ──────────────────────────────────────
 #
 # Unified sensor API: every sensor (audio, keystrokes, screen, eeg)
@@ -641,11 +881,28 @@ def gates():
 
 import sensors as _sensors  # noqa: E402
 
+# APNs push channel (issue #17). Mounted as a sub-router so its routes
+# pick up the same auth + CORS middleware as everything else.
+import push as _push  # noqa: E402
+app.include_router(_push.router)
+
+
+# Every sensor read endpoint runs the sensor's status()/recent() under
+# asyncio.to_thread. These methods are sync and may touch deques or do
+# small filesystem reads; running them inline on the event loop is what
+# allowed issue #22 — a single slow Win32 enumeration call inside
+# ScreenSensor.summary() blocked the entire FastAPI loop indefinitely
+# while sensor threads kept happily writing to disk. to_thread keeps
+# the event loop free even if a sensor's status() call is slow.
+
+def _all_sensor_statuses() -> list[dict]:
+    return [s.status() for s in _sensors.all_sensors()]
+
 
 @app.get("/api/sensors")
 async def sensors_list():
     """List every sensor and its current status (for the Subconscious page)."""
-    return [s.status() for s in _sensors.all_sensors()]
+    return await asyncio.to_thread(_all_sensor_statuses)
 
 
 @app.get("/api/sensors/{name}/status")
@@ -653,7 +910,7 @@ async def sensor_status(name: str):
     s = _sensors.get(name)
     if s is None:
         raise HTTPException(status_code=404, detail=f"unknown sensor: {name}")
-    return s.status()
+    return await asyncio.to_thread(s.status)
 
 
 @app.post("/api/sensors/{name}/start")
@@ -662,7 +919,7 @@ async def sensor_start(name: str):
     if s is None:
         raise HTTPException(status_code=404, detail=f"unknown sensor: {name}")
     s.start()
-    return s.status()
+    return await asyncio.to_thread(s.status)
 
 
 @app.post("/api/sensors/{name}/stop")
@@ -671,7 +928,7 @@ async def sensor_stop(name: str):
     if s is None:
         raise HTTPException(status_code=404, detail=f"unknown sensor: {name}")
     s.stop()
-    return s.status()
+    return await asyncio.to_thread(s.status)
 
 
 @app.get("/api/sensors/{name}/recent")
@@ -679,23 +936,335 @@ async def sensor_recent(name: str, seconds: int = 3600):
     s = _sensors.get(name)
     if s is None:
         raise HTTPException(status_code=404, detail=f"unknown sensor: {name}")
-    return s.recent(seconds=seconds)
+    # recent() reads JSONL files from disk — must not block the loop.
+    return await asyncio.to_thread(s.recent, seconds)
 
 
-@app.post("/api/sensors/start_all")
-async def sensors_start_all():
-    """Turn on every available sensor."""
+def _start_all_sensors() -> list[dict]:
     for s in _sensors.all_sensors():
         if s.available():
             s.start()
     return [s.status() for s in _sensors.all_sensors()]
 
 
-@app.post("/api/sensors/stop_all")
-async def sensors_stop_all():
+def _stop_all_sensors() -> list[dict]:
     for s in _sensors.all_sensors():
         s.stop()
     return [s.status() for s in _sensors.all_sensors()]
+
+
+@app.post("/api/sensors/start_all")
+async def sensors_start_all():
+    """Turn on every available sensor."""
+    return await asyncio.to_thread(_start_all_sensors)
+
+
+@app.post("/api/sensors/stop_all")
+async def sensors_stop_all():
+    return await asyncio.to_thread(_stop_all_sensors)
+
+
+# ── Receptivity gate ────────────────────────────────────────────────
+#
+# Channel-aware consent gate: decides *when* and *how* to surface a
+# pending intention to the member (voice whisper / Signal text / queue).
+
+import receptivity as _receptivity  # noqa: E402
+
+
+class IntentionIn(BaseModel):
+    id: str
+    description: str
+    urgency: str = "normal"          # low | normal | high | critical
+    source: str = "unknown"
+    context: Optional[str] = None
+    estimated_voice_words: int = 15
+
+
+class SensorStateIn(BaseModel):
+    """Optional snapshot the caller can supply.  When omitted the bridge
+    reads the live sensor singletons via ``aggregate_signals()``."""
+    idle_seconds: Optional[float] = None
+    typing_wpm: Optional[float] = None
+    active_app: Optional[str] = None
+    screen_locked: Optional[bool] = None
+    signal_active: Optional[bool] = None
+    room_rms: Optional[float] = None
+    speech_active: Optional[bool] = None
+    in_meeting: Optional[bool] = None
+    confidence: float = 0.0
+
+
+class EvaluateRequest(BaseModel):
+    intention: IntentionIn
+    sensor_state: Optional[SensorStateIn] = None  # None → use live sensors
+
+
+class GateDecisionOut(BaseModel):
+    surface_now: bool
+    channel: str           # "voice" | "text" | "queue"
+    reason: str
+    score: float
+    budget_words_remaining: int
+    budget_interruptions_today: int
+
+
+class BudgetOut(BaseModel):
+    daily_word_limit: int
+    words_used_today: int
+    words_remaining: int
+    interruptions_today: int
+    max_interruptions: int
+    budget_exhausted: bool
+
+
+class RecordVoiceUsageIn(BaseModel):
+    words: int
+
+
+@app.post("/api/receptivity/evaluate", response_model=GateDecisionOut)
+def receptivity_evaluate(body: EvaluateRequest):
+    """Evaluate whether to surface *intention* right now and through which channel.
+
+    The caller (e.g. PACT-GitHub connector) passes an ``Intention`` and
+    optionally a ``SensorState``.  When ``sensor_state`` is omitted the
+    bridge reads the live sensor singletons.
+
+    Returns a ``GateDecision`` plus current budget metadata.
+    """
+    intention = _receptivity.Intention(
+        id=body.intention.id,
+        description=body.intention.description,
+        urgency=body.intention.urgency,  # type: ignore[arg-type]
+        source=body.intention.source,
+        context=body.intention.context,
+        estimated_voice_words=body.intention.estimated_voice_words,
+    )
+
+    if body.sensor_state is not None:
+        sensor_state = _receptivity.SensorState(
+            idle_seconds=body.sensor_state.idle_seconds,
+            typing_wpm=body.sensor_state.typing_wpm,
+            active_app=body.sensor_state.active_app,
+            screen_locked=body.sensor_state.screen_locked,
+            signal_active=body.sensor_state.signal_active,
+            room_rms=body.sensor_state.room_rms,
+            speech_active=body.sensor_state.speech_active,
+            in_meeting=body.sensor_state.in_meeting,
+            confidence=body.sensor_state.confidence,
+        )
+    else:
+        sensor_state = _receptivity.aggregate_signals()
+
+    budget = _receptivity.load_budget()
+    decision = _receptivity.receptivity_gate(intention, sensor_state, budget)
+
+    return GateDecisionOut(
+        surface_now=decision.surface_now,
+        channel=decision.channel,
+        reason=decision.reason,
+        score=decision.score,
+        budget_words_remaining=budget.words_remaining,
+        budget_interruptions_today=budget.interruptions_today,
+    )
+
+
+@app.get("/api/receptivity/budget", response_model=BudgetOut)
+def receptivity_budget():
+    """Return the current daily voice-word budget."""
+    b = _receptivity.load_budget()
+    return BudgetOut(
+        daily_word_limit=b.daily_word_limit,
+        words_used_today=b.words_used_today,
+        words_remaining=b.words_remaining,
+        interruptions_today=b.interruptions_today,
+        max_interruptions=b.max_interruptions,
+        budget_exhausted=b.budget_exhausted,
+    )
+
+
+@app.post("/api/receptivity/budget/use", response_model=BudgetOut)
+def receptivity_budget_use(body: RecordVoiceUsageIn):
+    """Record *words* spoken aloud and increment the interruption counter.
+
+    Call this after each successful voice whisper so the daily budget
+    stays accurate.
+    """
+    updated = _receptivity.record_voice_usage(body.words)
+    return BudgetOut(
+        daily_word_limit=updated.daily_word_limit,
+        words_used_today=updated.words_used_today,
+        words_remaining=updated.words_remaining,
+        interruptions_today=updated.interruptions_today,
+        max_interruptions=updated.max_interruptions,
+        budget_exhausted=updated.budget_exhausted,
+    )
+
+
+# ── QR-code pairing (Wave 1) ────────────────────────────────────────
+#
+# A new phone joining the deployment shouldn't have to read or copy-paste
+# a 48-char hex token. The desktop dashboard renders a QR encoding a
+# one-time pairing URL; the phone scans → SWA hits /redeem → bearer
+# token transfers automatically.
+#
+# Both endpoints are auth-exempt (see _PUBLIC_PATHS) — they are the
+# bootstrap path for a device that has nothing yet. Defenses in depth:
+#   - Codes are 6 chars from a 32-char confusable-free alphabet (~32^6
+#     ≈ 1B). Brute-force at 3 attempts per code is hopeless.
+#   - 60s TTL is the security ceiling.
+#   - Single-use; redeemed codes are dropped immediately.
+#   - Begin-rate limit: 10/min per remote IP.
+#   - State is in-process only — never written to disk or vault.
+
+class PairBeginResponse(BaseModel):
+    code: str
+    url: str
+    expires_at: float   # unix epoch seconds
+
+
+class PairRedeemRequest(BaseModel):
+    code: str
+
+
+class PairRedeemResponse(BaseModel):
+    token: str
+
+
+def _log_pair_event(event: str, **fields) -> None:
+    """Append a pairing event to gate_events.jsonl (the existing audit log)."""
+    record = {
+        "ts": datetime.now(core.AEST).isoformat(),
+        "gate": "pair",
+        "event": event,
+        **fields,
+    }
+    try:
+        with open(core.LOGS_DIR / "gate_events.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps(record) + "\n")
+    except Exception:
+        pass
+
+
+def _pair_remote_ip(request: Request) -> str:
+    """Best-effort remote IP. Honours X-Forwarded-For when present (relay)."""
+    xff = request.headers.get("x-forwarded-for", "")
+    if xff:
+        return xff.split(",")[0].strip()
+    if request.client and request.client.host:
+        return request.client.host
+    return "unknown"
+
+
+@app.post("/api/pair/begin", response_model=PairBeginResponse)
+async def pair_begin(request: Request):
+    """Mint a fresh 6-char pairing code with 60s TTL.
+
+    The phone hits /redeem?code=XXXXXX with the returned URL. If
+    HMAN_AUTH_TOKEN is unset (dev mode), the redeemed token is the
+    empty string — the dev bridge accepts that anyway.
+    """
+    remote_ip = _pair_remote_ip(request)
+
+    # Determine the base URL the phone should hit. Prefer explicit
+    # HMAN_PUBLIC_URL so the SWA origin is correct in production; fall
+    # back to the request's own origin (good enough for dev / LAN).
+    base_url = (
+        os.environ.get("HMAN_PUBLIC_URL", "").strip()
+        or request.headers.get("origin", "").strip()
+        or f"{request.url.scheme}://{request.url.netloc}"
+    )
+
+    # In dev mode the bearer token may be empty. That's fine — the dev
+    # bridge has auth disabled, so the phone won't need a token to talk
+    # to it. Still hand back a placeholder so the redeem flow is uniform.
+    bearer = _AUTH_TOKEN or ""
+
+    try:
+        entry, redeem_url = core.begin_pairing(
+            token=bearer, base_url=base_url, remote_ip=remote_ip
+        )
+    except ValueError as e:
+        _log_pair_event("begin_rate_limited", remote_ip=remote_ip, reason=str(e))
+        raise HTTPException(status_code=429, detail="too many pairing requests")
+
+    _log_pair_event("begin", remote_ip=remote_ip, expires_in=core.PAIRING_TTL_SECONDS)
+    return PairBeginResponse(
+        code=entry.code,
+        url=redeem_url,
+        expires_at=entry.expires_at,
+    )
+
+
+@app.post("/api/pair/redeem", response_model=PairRedeemResponse)
+async def pair_redeem(body: PairRedeemRequest, request: Request):
+    """Single-use redemption. Returns the bearer token on success.
+
+    The phone calls this after scanning the QR. On success the response
+    contains the token to put in localStorage; on any failure mode
+    (expired, redeemed, unknown, exhausted attempts) the phone should
+    show the failure reason and prompt the user to start over on
+    desktop.
+    """
+    remote_ip = _pair_remote_ip(request)
+    code = (body.code or "").strip().upper()
+    try:
+        token = core.redeem_pairing(code)
+    except core.PairingError as e:
+        _log_pair_event(
+            "redeem_fail",
+            remote_ip=remote_ip,
+            code_prefix=code[:2] if code else "",
+            reason=e.reason,
+        )
+        raise HTTPException(status_code=e.status, detail=e.reason)
+
+    _log_pair_event("redeem_success", remote_ip=remote_ip, code_prefix=code[:2])
+    return PairRedeemResponse(token=token)
+
+
+# ── Connectors (PACT-mediated external actions) ─────────────────────
+#
+# First implementation: PACT-GitHub. The connector's draft/execute path
+# is gated by Gate 5 freshness — the consent moment must be backed by
+# a recent voice-biometric activation. We register a freshness check
+# that the connectors module calls on every draft/execute request.
+
+from api import connectors as _connectors_router  # noqa: E402
+
+
+def _gate5_freshness_check() -> tuple[bool, str]:
+    """Return ``(ok, reason)`` for the connector module.
+
+    ``ok`` is True iff Gate 5 is armed AND the last accepting activation
+    is within ``GATE5_FRESHNESS_SECONDS`` of *now*. This is the
+    "is this still really the member" check the connector spec calls
+    for at the consent moment.
+    """
+    with _gate5_lock:
+        armed = _gate5_reference is not None
+        last = _gate5_last_activation
+    if not armed:
+        return False, "Gate 5 not armed (call /api/gate5/unlock first)"
+    if last is None:
+        return False, "Gate 5 has no recent successful activation"
+    try:
+        last_dt = datetime.fromisoformat(last)
+        now = datetime.now(last_dt.tzinfo) if last_dt.tzinfo else datetime.now()
+        delta = (now - last_dt).total_seconds()
+    except Exception:
+        return False, "Gate 5 last activation timestamp unparseable"
+    if delta > _connectors_router.GATE5_FRESHNESS_SECONDS:
+        return (
+            False,
+            f"Gate 5 last activation {int(delta)}s ago, "
+            f"freshness window {_connectors_router.GATE5_FRESHNESS_SECONDS}s",
+        )
+    return True, "fresh"
+
+
+_connectors_router.configure_gate5_check(_gate5_freshness_check)
+app.include_router(_connectors_router.router)
 
 
 # ── Dev entrypoint ──────────────────────────────────────────────────

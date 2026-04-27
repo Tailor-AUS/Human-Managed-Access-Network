@@ -27,6 +27,12 @@ bleak>=0.22          # BLE for Muse S Athena (eeg sensor, future)
 # Cryptography
 cryptography>=42.0
 
+# APNs push (issue #17) — used by api/push.py to dispatch consent
+# prompts to the registered iPhone. Imported lazily; the bridge keeps
+# working without this if the receptivity gate never picks the apns
+# channel.
+aioapns>=3.1
+
 # Misc
 numpy>=1.24
 requests>=2.31

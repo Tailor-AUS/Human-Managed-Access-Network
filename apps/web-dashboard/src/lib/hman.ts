@@ -92,6 +92,29 @@ export interface Gate5Unlock {
   threshold: number
 }
 
+export interface TranscribeResult {
+  text: string
+  duration_s: number
+  rms: number
+}
+
+export interface VoiceRespondResult {
+  reply: string
+  /** Path on the bridge serving a one-shot signed wav. Null when Piper
+   * isn't available — the client falls back to Web Speech Synthesis. */
+  tts_url: string | null
+}
+
+export interface PairBegin {
+  code: string
+  url: string
+  expires_at: number   // unix epoch seconds
+}
+
+export interface PairRedeem {
+  token: string
+}
+
 async function j<T>(r: Response): Promise<T> {
   if (!r.ok) {
     const body = await r.text().catch(() => '')
@@ -169,6 +192,26 @@ export const hman = {
     )
   },
 
+  // QR-code phone pairing — auth-exempt on the bridge side.
+  async pairBegin(): Promise<PairBegin> {
+    return j(
+      await fetch(`${BASE}/api/pair/begin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+  },
+
+  async pairRedeem(code: string): Promise<PairRedeem> {
+    return j(
+      await fetch(`${BASE}/api/pair/redeem`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      }),
+    )
+  },
+
   // Sensors — unified API for every capture stream (audio, keystrokes, screen, eeg)
   async sensors(): Promise<SensorStatus[]> {
     return j(await fetch(`${BASE}/api/sensors`, { headers: authHeaders() }))
@@ -216,6 +259,39 @@ export const hman = {
         headers: authHeaders(),
       }),
     )
+  },
+
+  // In-PWA voice loop (issue #9) — push-to-talk in the dashboard
+  async transcribe(audio: Blob): Promise<TranscribeResult> {
+    const form = new FormData()
+    form.append('audio', audio, 'utterance.webm')
+    return j(
+      await fetch(`${BASE}/api/audio/transcribe`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: form,
+      }),
+    )
+  },
+
+  async voiceRespond(text: string, context?: string): Promise<VoiceRespondResult> {
+    return j(
+      await fetch(`${BASE}/api/voice/respond`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ text, context: context ?? null }),
+      }),
+    )
+  },
+
+  /** Build an absolute URL for a tts_url returned by /api/voice/respond.
+   * Authorization isn't sendable from a plain `<audio>` src, so we
+   * fetch the bytes here, blob-URL them, and let the caller play. */
+  async fetchVoiceAudio(ttsUrl: string): Promise<string> {
+    const r = await fetch(`${BASE}${ttsUrl}`, { headers: authHeaders() })
+    if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text().catch(() => '')}`)
+    const blob = await r.blob()
+    return URL.createObjectURL(blob)
   },
 }
 

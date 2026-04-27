@@ -1,0 +1,19 @@
+NSSM (Non-Sucking Service Manager)
+Version 2.24 (vendored 2014-08-31 release)
+Source: https://nssm.cc/release/nssm-2.24.zip
+
+NSSM is released into the public domain by its author Iain Patterson.
+The full license statement is reproduced from https://nssm.cc/license:
+
+    NSSM is public domain.  You may unconditionally use it and/or its source
+    code for any purpose you wish.  There are no restrictions on its use,
+    distribution or modification.
+
+The bundled binary is the upstream `win64/nssm.exe` from the official
+distribution zip, copied here unmodified so that
+`ops/install-windows-service.ps1` is self-contained and runnable on a
+fresh checkout without an extra download step.
+
+If you would prefer to verify and supply your own NSSM build, replace
+`ops/nssm/nssm.exe` with the matching binary from https://nssm.cc/ before
+running the install script.

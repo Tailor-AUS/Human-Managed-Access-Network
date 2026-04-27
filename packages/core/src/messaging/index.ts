@@ -68,3 +68,12 @@ export {
   type AccessDecision,
   type DataRelease,
 } from './hman-protocol.js';
+
+// APNs push channel (issue #17) — used by the receptivity gate
+// (issue #4) when an intention's surface channel resolves to `apns`.
+export {
+  dispatchToAPNs,
+  type DispatchableIntention,
+  type PushDispatchResult,
+  type PushDispatcherConfig,
+} from './push.js';

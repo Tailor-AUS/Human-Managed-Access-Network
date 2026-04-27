@@ -143,18 +143,18 @@ export function MemoryPage() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold text-text-primary flex items-center gap-3">
-            <Folder className="w-7 h-7 text-blue-400" /> Memory
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-text-primary flex items-center gap-3">
+            <Folder className="w-7 h-7 text-blue-400 shrink-0" /> Memory
           </h1>
-          <p className="text-text-secondary mt-1">
+          <p className="text-text-secondary mt-1 text-base">
             Everything the subconscious has captured. Last 6 hours across all sensors.
           </p>
         </div>
         <button
           onClick={refresh}
-          className="p-2 rounded-lg border border-border hover:bg-background-secondary text-text-secondary"
+          className="shrink-0 min-h-11 min-w-11 p-2 rounded-lg border border-border hover:bg-background-secondary text-text-secondary inline-flex items-center justify-center"
           title="Refresh"
         >
           <RefreshCw className="w-4 h-4" />
@@ -173,7 +173,7 @@ export function MemoryPage() {
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+            className={`min-h-11 px-3 py-1.5 rounded-full text-sm transition-colors ${
               filter === f
                 ? 'bg-blue-600 text-white'
                 : 'bg-background-secondary border border-border text-text-secondary hover:text-text-primary'
@@ -201,10 +201,10 @@ export function MemoryPage() {
             {filtered.map((row, i) => {
               const Icon = SENSOR_ICONS[row._sensor] ?? Ear
               return (
-                <li key={i} className="px-5 py-3 flex gap-3">
+                <li key={i} className="px-4 sm:px-5 py-3 flex gap-3">
                   <Icon className="w-4 h-4 text-text-secondary shrink-0 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 text-xs text-text-secondary mb-1">
+                  <div className="flex-1 min-w-0 break-words">
+                    <div className="flex items-center gap-2 text-xs text-text-secondary mb-1 flex-wrap">
                       <span className="uppercase tracking-wider">{row._sensor}</span>
                       <span>·</span>
                       <span>{formatRelative(String(row.ts))}</span>
@@ -218,7 +218,7 @@ export function MemoryPage() {
         )}
       </div>
 
-      <p className="text-xs text-text-secondary font-mono">{memoryDir}</p>
+      <p className="text-xs text-text-secondary font-mono break-all">{memoryDir}</p>
     </div>
   )
 }

@@ -81,16 +81,16 @@ export function GatesPage() {
 
   return (
     <div className="max-w-3xl">
-      <div className="flex items-start justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-semibold text-text-primary">The Five Gates</h1>
-          <p className="text-text-secondary mt-1">
+      <div className="flex items-start justify-between gap-3 mb-6 sm:mb-8">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-text-primary">The Five Gates</h1>
+          <p className="text-text-secondary mt-1 text-base">
             Every feature must pass all five. If any gate leaks, the member is the product.
           </p>
         </div>
         <button
           onClick={refresh}
-          className="p-2 rounded-lg hover:bg-background-secondary text-text-secondary"
+          className="shrink-0 min-h-11 min-w-11 p-2 rounded-lg hover:bg-background-secondary text-text-secondary inline-flex items-center justify-center"
           title="Refresh"
         >
           <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
@@ -203,14 +203,14 @@ export function GatesPage() {
                               {gate5.armed ? (
                                 <button
                                   onClick={disarm}
-                                  className="px-3 py-1.5 rounded-md text-xs border border-border hover:bg-background-secondary inline-flex items-center gap-1.5 text-text-secondary hover:text-text-primary"
+                                  className="min-h-11 px-3 py-1.5 rounded-md text-sm border border-border hover:bg-background-secondary inline-flex items-center gap-1.5 text-text-secondary hover:text-text-primary"
                                 >
                                   <ShieldOff className="w-3.5 h-3.5" /> Disarm
                                 </button>
                               ) : (
                                 <button
                                   onClick={() => setShowArmModal(true)}
-                                  className="px-3 py-1.5 rounded-md text-xs bg-blue-600 hover:bg-blue-500 text-white inline-flex items-center gap-1.5"
+                                  className="min-h-11 px-3 py-1.5 rounded-md text-sm bg-blue-600 hover:bg-blue-500 text-white inline-flex items-center gap-1.5"
                                 >
                                   <Unlock className="w-3.5 h-3.5" /> Arm (unlock with passphrase)
                                 </button>
@@ -219,7 +219,7 @@ export function GatesPage() {
                           ) : (
                             <a
                               href="/app/onboarding"
-                              className="text-xs inline-flex items-center gap-1 text-blue-400 hover:text-blue-300"
+                              className="min-h-11 text-sm inline-flex items-center gap-1 text-blue-400 hover:text-blue-300"
                             >
                               <Mic className="w-3.5 h-3.5" /> Enroll your voice
                             </a>
@@ -323,23 +323,23 @@ function ArmModal({
           onChange={e => setPassphrase(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && submit()}
           placeholder="Passphrase"
-          className="w-full px-4 py-2.5 rounded-lg bg-background border border-border focus:border-blue-500 focus:outline-none text-text-primary mb-2"
+          className="w-full min-h-11 px-4 py-2.5 rounded-lg bg-background border border-border focus:border-blue-500 focus:outline-none text-text-primary text-base mb-2"
         />
-        {err && <p className="text-xs text-red-400 mb-2">{err}</p>}
+        {err && <p className="text-xs text-red-400 mb-2 break-words">{err}</p>}
         <p className="text-xs text-text-secondary mb-4">
           Held in memory only. Clears on bridge restart — you'll re-arm each session.
         </p>
         <div className="flex gap-2">
           <button
             onClick={onCancel}
-            className="flex-1 px-4 py-2 rounded-lg border border-border text-text-secondary hover:text-text-primary hover:bg-background text-sm"
+            className="flex-1 min-h-11 px-4 py-2 rounded-lg border border-border text-text-secondary hover:text-text-primary hover:bg-background text-base"
           >
             Cancel
           </button>
           <button
             onClick={submit}
             disabled={busy}
-            className="flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm inline-flex items-center justify-center gap-2"
+            className="flex-1 min-h-11 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-base inline-flex items-center justify-center gap-2"
           >
             {busy ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Unlock className="w-4 h-4" />}
             Arm

@@ -23,6 +23,9 @@ export {
   fromHex,
   randomBytes,
   secureCompare,
+  generateSigningKeyPair,
+  sign,
+  verify,
   DEFAULT_KEY_DERIVATION_CONFIG,
   type KeyDerivationConfig,
 } from './encryption.js';

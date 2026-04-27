@@ -29,7 +29,6 @@ class AudioSensor(Sensor):
     def __init__(self, device: Optional[int] = None) -> None:
         super().__init__()
         self.device = device
-        self._whisper_model = None
         self.chunks_silent = 0
         self.last_transcript = ""
         self._current_rms = 0.0
@@ -138,14 +137,9 @@ class AudioSensor(Sensor):
         self._peak_rms_60s = 0.0
 
     def _transcribe(self, audio: np.ndarray) -> str:
-        # faster-whisper (CTranslate2) — no torch dependency, 3-4x faster on CPU
-        # than openai-whisper, and dodges the c10.dll load failure on this box.
-        if self._whisper_model is None:
-            from faster_whisper import WhisperModel
-            self._whisper_model = WhisperModel(
-                "base", device="cpu", compute_type="int8",
-            )
-        segments, _info = self._whisper_model.transcribe(
-            audio, language="en", beam_size=1,
-        )
-        return " ".join(seg.text for seg in segments).strip()
+        # Delegated to core.transcribe_audio so the same faster-whisper
+        # singleton serves both the ambient sensor and the PWA push-to-talk
+        # endpoint. faster-whisper has no torch dependency and dodges the
+        # c10.dll load failure on this box.
+        from core import transcribe_audio  # local import to avoid sensor->core cycle at module load
+        return transcribe_audio(audio).get("text", "")

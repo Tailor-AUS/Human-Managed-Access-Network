@@ -228,16 +228,16 @@ export function RequestsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold">Access Requests</h1>
-          <p className="text-gray-400">
+          <p className="text-gray-400 text-base">
             {pendingCount} pending request{pendingCount !== 1 && 's'} awaiting your approval
           </p>
         </div>
         <button
           onClick={() => loadData(true)}
           disabled={isRefreshing}
-          className="flex items-center gap-2 rounded-lg bg-surface border border-border px-4 py-2 text-sm font-medium hover:bg-background-tertiary disabled:opacity-50 transition-colors"
+          className="min-h-11 flex items-center justify-center gap-2 rounded-lg bg-surface border border-border px-4 py-2 text-base font-medium hover:bg-background-tertiary disabled:opacity-50 transition-colors"
         >
           <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           {isRefreshing ? 'Refreshing...' : 'Refresh'}
@@ -258,14 +258,14 @@ export function RequestsPage() {
       )}
 
       {/* Filters */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2">
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
         <Filter className="h-5 w-5 text-gray-400 flex-shrink-0" />
         {(['all', 'pending', 'approved', 'denied', 'expired'] as FilterStatus[]).map(
           (status) => (
             <button
               key={status}
               onClick={() => setFilter(status)}
-              className={`flex-shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+              className={`flex-shrink-0 min-h-11 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                 filter === status
                   ? 'bg-primary text-white'
                   : 'bg-surface text-gray-400 hover:text-white'
@@ -292,12 +292,12 @@ export function RequestsPage() {
           return (
             <div
               key={request.id}
-              className={`rounded-xl border bg-surface p-6 ${
+              className={`rounded-xl border bg-surface p-4 sm:p-6 ${
                 request.status === 'pending' ? 'border-level-gated' : 'border-border'
               }`}
             >
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div className="flex gap-4">
+                <div className="flex gap-3 sm:gap-4 min-w-0">
                   {/* Requester Icon */}
                   <div
                     className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg ${
@@ -320,22 +320,22 @@ export function RequestsPage() {
                   </div>
 
                   {/* Request Info */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold">{request.requesterName}</h3>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold break-words">{request.requesterName}</h3>
                       <span className="text-sm text-gray-400">
                         ({request.requesterType.replace('_', ' ')})
                       </span>
                     </div>
-                    <div className="mt-1 text-sm text-primary">
+                    <div className="mt-1 text-sm text-primary break-words">
                       {request.resourceName}
                     </div>
-                    <p className="mt-2 text-sm text-gray-400">{request.purpose}</p>
+                    <p className="mt-2 text-sm text-gray-400 break-words">{request.purpose}</p>
 
                     {/* Status */}
-                    <div className="mt-3 flex items-center gap-4">
+                    <div className="mt-3 flex items-center gap-4 flex-wrap">
                       <div className={`flex items-center gap-1.5 ${statusColor}`}>
-                        <StatusIcon className="h-4 w-4" />
+                        <StatusIcon className="h-4 w-4 shrink-0" />
                         <span className="text-sm font-medium capitalize">
                           {request.status}
                         </span>
@@ -351,11 +351,11 @@ export function RequestsPage() {
 
                 {/* Actions */}
                 {request.status === 'pending' && (
-                  <div className="flex gap-2 lg:flex-shrink-0">
+                  <div className="flex gap-2 flex-wrap lg:flex-shrink-0">
                     <button
                       onClick={() => handleApprove(request.id)}
                       disabled={actionInProgress === request.id}
-                      className="flex items-center gap-2 rounded-lg bg-level-open px-4 py-2 text-sm font-medium text-black hover:bg-level-open/90 disabled:opacity-50 transition-colors"
+                      className="min-h-11 flex items-center gap-2 rounded-lg bg-level-open px-4 py-2 text-base font-medium text-black hover:bg-level-open/90 disabled:opacity-50 transition-colors"
                     >
                       {actionInProgress === request.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -367,7 +367,7 @@ export function RequestsPage() {
                     <button
                       onClick={() => handleDeny(request.id)}
                       disabled={actionInProgress === request.id}
-                      className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-background-tertiary disabled:opacity-50 transition-colors"
+                      className="min-h-11 flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-base font-medium hover:bg-background-tertiary disabled:opacity-50 transition-colors"
                     >
                       {actionInProgress === request.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />

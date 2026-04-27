@@ -101,7 +101,7 @@ function LiveChips({ sensor }: { sensor: SensorStatus }) {
       chips.push(<Chip key="chunks">{(s.chunks_captured as number) ?? 0} chunks</Chip>)
       if (s.last_transcript) {
         chips.push(
-          <span key="last" className="text-xs text-text-secondary italic truncate max-w-md">
+          <span key="last" className="text-xs text-text-secondary italic truncate max-w-full sm:max-w-md w-full sm:w-auto">
             "{String(s.last_transcript).slice(0, 90)}"
           </span>,
         )
@@ -269,24 +269,24 @@ export function SubconsciousPage() {
 
   return (
     <div className="max-w-4xl space-y-6">
-      <div className="rounded-xl border border-border bg-background-secondary p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold text-text-primary flex items-center gap-3">
-              <Power className={`w-8 h-8 ${anyRunning ? 'text-green-400' : 'text-gray-500'}`} />
+      <div className="rounded-xl border border-border bg-background-secondary p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-text-primary flex items-center gap-3">
+              <Power className={`w-7 h-7 sm:w-8 sm:h-8 shrink-0 ${anyRunning ? 'text-green-400' : 'text-gray-500'}`} />
               Subconscious
             </h1>
-            <p className="text-text-secondary mt-2 max-w-xl">
+            <p className="text-text-secondary mt-2 max-w-xl text-base">
               Reactive, not invasive. Listens continuously, writes to a local memory store, never interrupts.
             </p>
             <p className="mt-3 text-sm text-text-secondary">
               {runningCount} of {availableCount} available sensors active
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               onClick={poll}
-              className="p-2 rounded-lg border border-border hover:bg-background text-text-secondary"
+              className="shrink-0 min-h-11 min-w-11 p-2 rounded-lg border border-border hover:bg-background text-text-secondary inline-flex items-center justify-center"
               title="Refresh"
             >
               <RefreshCw className="w-4 h-4" />
@@ -294,7 +294,7 @@ export function SubconsciousPage() {
             <button
               onClick={toggleAll}
               disabled={busy === '_all'}
-              className={`inline-flex items-center gap-2 px-5 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 ${
+              className={`flex-1 sm:flex-none min-h-11 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg font-medium text-base transition-colors disabled:opacity-50 ${
                 anyRunning
                   ? 'bg-background border border-border text-text-primary hover:bg-background-secondary'
                   : 'bg-blue-600 hover:bg-blue-500 text-white'
@@ -338,8 +338,8 @@ export function SubconsciousPage() {
                 s.running ? 'border-green-500/40' : 'border-border'
               } ${!s.available ? 'opacity-60' : ''}`}
             >
-              <div className="p-5 flex items-start justify-between gap-4">
-                <div className="flex items-start gap-4 flex-1 min-w-0">
+              <div className="p-4 sm:p-5 flex items-start justify-between gap-3 sm:gap-4 flex-wrap">
+                <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
                   <div
                     className={`h-10 w-10 shrink-0 rounded-lg flex items-center justify-center`}
                     style={{
@@ -366,7 +366,7 @@ export function SubconsciousPage() {
                 <button
                   onClick={() => toggleSensor(s.name, s.running)}
                   disabled={disabled}
-                  className={`shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 ${
+                  className={`shrink-0 min-h-11 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-base font-medium transition-colors disabled:opacity-40 ${
                     s.running
                       ? 'bg-background border border-border text-text-primary hover:bg-background-secondary'
                       : 'bg-blue-600 hover:bg-blue-500 text-white'
@@ -384,8 +384,8 @@ export function SubconsciousPage() {
               </div>
 
               {/* Live trace */}
-              <div className="px-5 pb-3">
-                <div className="rounded-md bg-background/50 p-3">
+              <div className="px-4 sm:px-5 pb-3">
+                <div className="rounded-md bg-background/50 p-3 overflow-hidden">
                   {s.name === 'screen' ? (
                     <ActivityTimeline
                       segments={appSegments}
@@ -405,10 +405,10 @@ export function SubconsciousPage() {
               </div>
 
               {/* Live chips */}
-              <div className="px-5 pb-5">
+              <div className="px-4 sm:px-5 pb-4 sm:pb-5">
                 <LiveChips sensor={s} />
                 {s.last_error && (
-                  <p className="mt-2 text-xs text-amber-400 font-mono">{s.last_error}</p>
+                  <p className="mt-2 text-xs text-amber-400 font-mono break-all">{s.last_error}</p>
                 )}
               </div>
             </div>

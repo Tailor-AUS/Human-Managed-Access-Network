@@ -47,37 +47,46 @@ export function WelcomePage() {
   const bridgeOnline = health !== null
 
   return (
-    <div className="min-h-screen bg-background text-text-primary">
+    <div
+      className="min-h-screen bg-background text-text-primary"
+      style={{
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}
+    >
       {/* Top bar */}
-      <header className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="w-6 h-6 text-blue-400" />
+      <header className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-6 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <ShieldCheck className="w-6 h-6 text-blue-400 shrink-0" />
           <span className="text-lg font-semibold">.HMAN</span>
-          <span className="text-xs text-text-secondary ml-2">v0.1 · prototype</span>
+          <span className="hidden sm:inline text-xs text-text-secondary ml-2">v0.1 · prototype</span>
         </div>
-        <nav className="flex items-center gap-4 text-sm text-text-secondary">
+        <nav className="flex items-center gap-2 sm:gap-4 text-sm text-text-secondary">
           <a
             href="https://github.com/Tailor-AUS/Human-Managed-Access-Network"
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 hover:text-text-primary"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 px-2 hover:text-text-primary"
           >
-            <Github className="w-4 h-4" /> Source
+            <Github className="w-4 h-4" />
+            <span className="hidden sm:inline">Source</span>
           </a>
-          <Link to="/app" className="hover:text-text-primary">
+          <Link to="/app" className="inline-flex min-h-11 items-center px-2 hover:text-text-primary">
             Member app
           </Link>
         </nav>
       </header>
 
       {/* Hero */}
-      <section className="max-w-5xl mx-auto px-6 pt-10 pb-16 text-center">
-        <h1 className="text-5xl md:text-6xl font-semibold tracking-tight mb-6 leading-tight">
+      <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10 pb-12 sm:pb-16 text-center">
+        <h1 className="text-3xl sm:text-5xl md:text-6xl font-semibold tracking-tight mb-6 leading-tight">
           Your personal subconscious.
           <br />
           <span className="text-text-secondary">Local. Encrypted. Yours.</span>
         </h1>
-        <p className="text-xl text-text-secondary max-w-2xl mx-auto mb-10">
+        <p className="text-base sm:text-xl text-text-secondary max-w-2xl mx-auto mb-8 sm:mb-10">
           .HMAN runs on your device. Not someone else&rsquo;s cloud. It listens to the signals
           only you have access to — voice, keystrokes, screen, brain — and nothing leaves without
           your explicit authorisation.
@@ -90,7 +99,7 @@ export function WelcomePage() {
           {enrolled && bridgeOnline ? (
             <Link
               to="/app"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-lg"
+              className="inline-flex min-h-11 items-center gap-2 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-base sm:text-lg"
             >
               You&rsquo;re in — continue to your .HMAN
               <ArrowRight className="w-5 h-5" />
@@ -98,14 +107,14 @@ export function WelcomePage() {
           ) : bridgeOnline ? (
             <a
               href="#install"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-lg"
+              className="inline-flex min-h-11 items-center gap-2 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-base sm:text-lg"
             >
               Install to start
               <ArrowRight className="w-5 h-5" />
             </a>
           ) : (
-            <div className="inline-flex items-center gap-2 px-5 py-3 rounded-lg border border-amber-500/40 bg-amber-900/10 text-amber-300 text-sm">
-              <AlertCircle className="w-4 h-4" />
+            <div className="inline-flex items-center gap-2 px-5 py-3 rounded-lg border border-amber-500/40 bg-amber-900/10 text-amber-300 text-base">
+              <AlertCircle className="w-4 h-4 shrink-0" />
               Your local .HMAN bridge isn&rsquo;t running on this device.
             </div>
           )}
@@ -125,15 +134,15 @@ export function WelcomePage() {
       </section>
 
       {/* Install / Sovereign roadmap */}
-      <section id="install" className="max-w-5xl mx-auto px-6 py-16 scroll-mt-16">
-        <h2 className="text-3xl font-semibold text-center mb-2">The sovereign roadmap</h2>
-        <p className="text-text-secondary text-center max-w-xl mx-auto mb-10">
+      <section id="install" className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-16 scroll-mt-16">
+        <h2 className="text-2xl sm:text-3xl font-semibold text-center mb-2">The sovereign roadmap</h2>
+        <p className="text-text-secondary text-center max-w-xl mx-auto mb-8 sm:mb-10">
           .HMAN is incremental. Each phase closes one more gate between you and someone else&rsquo;s cloud.
         </p>
 
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
           {/* Desktop */}
-          <div className="rounded-xl border border-border bg-background-secondary p-8">
+          <div className="rounded-xl border border-border bg-background-secondary p-6 sm:p-8">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2.5 rounded-lg bg-blue-500/10 text-blue-400">
                 <MonitorDown className="w-6 h-6" />
@@ -196,7 +205,7 @@ cd apps/web-dashboard && npm run dev`}
           </div>
 
           {/* Phone */}
-          <div className="rounded-xl border border-border bg-background-secondary p-8">
+          <div className="rounded-xl border border-border bg-background-secondary p-6 sm:p-8">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2.5 rounded-lg bg-purple-500/10 text-purple-400">
                 <Smartphone className="w-6 h-6" />
@@ -233,7 +242,7 @@ cd apps/web-dashboard && npm run dev`}
 
             <button
               disabled
-              className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-text-secondary text-sm font-medium cursor-not-allowed opacity-60"
+              className="w-full min-h-11 px-4 py-2.5 rounded-lg border border-border bg-background text-text-secondary text-base font-medium cursor-not-allowed opacity-60"
             >
               Join the waitlist (soon)
             </button>
@@ -242,8 +251,8 @@ cd apps/web-dashboard && npm run dev`}
       </section>
 
       {/* Five gates */}
-      <section className="max-w-5xl mx-auto px-6 py-16">
-        <h2 className="text-3xl font-semibold text-center mb-2">Five guarantees</h2>
+      <section className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+        <h2 className="text-2xl sm:text-3xl font-semibold text-center mb-2">Five guarantees</h2>
         <p className="text-text-secondary text-center max-w-xl mx-auto mb-10">
           The architecture enforces these. They aren&rsquo;t promises. They&rsquo;re gates.
           If any gate leaks, you&rsquo;re the product.
@@ -285,8 +294,8 @@ cd apps/web-dashboard && npm run dev`}
       </section>
 
       {/* Quote */}
-      <section className="max-w-3xl mx-auto px-6 py-20 text-center">
-        <p className="text-xl md:text-2xl text-text-primary italic leading-relaxed">
+      <section className="max-w-3xl mx-auto px-4 sm:px-6 py-12 sm:py-20 text-center">
+        <p className="text-lg sm:text-xl md:text-2xl text-text-primary italic leading-relaxed">
           &ldquo;These five gates will tell you if .HMAN is actually working as intended,
           or if it&rsquo;s just another surveillance device wearing a friendly mask.&rdquo;
         </p>
@@ -294,7 +303,7 @@ cd apps/web-dashboard && npm run dev`}
 
       {/* Footer */}
       <footer className="border-t border-border">
-        <div className="max-w-6xl mx-auto px-6 py-10 flex flex-wrap items-center justify-between gap-4 text-sm text-text-secondary">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10 flex flex-wrap items-center justify-between gap-4 text-sm text-text-secondary">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4" />
             <span>.HMAN platform · MIT licensed · built on PACT</span>
@@ -405,31 +414,31 @@ function SubconsciousPreview() {
   }, [tick])
 
   return (
-    <div className="max-w-3xl mx-auto rounded-xl border border-border bg-background-secondary overflow-hidden text-left shadow-2xl">
+    <div className="w-full max-w-3xl mx-auto rounded-xl border border-border bg-background-secondary overflow-hidden text-left shadow-2xl">
       {/* Window chrome */}
-      <div className="px-5 py-3 border-b border-border flex items-center gap-3">
-        <div className="flex items-center gap-1.5">
+      <div className="px-3 sm:px-5 py-3 border-b border-border flex items-center gap-3">
+        <div className="flex items-center gap-1.5 shrink-0">
           <span className="w-3 h-3 rounded-full bg-red-500/60" />
           <span className="w-3 h-3 rounded-full bg-amber-500/60" />
           <span className="w-3 h-3 rounded-full bg-green-500/60" />
         </div>
-        <div className="flex-1 text-center">
-          <span className="text-xs text-text-secondary font-mono">
+        <div className="flex-1 text-center min-w-0">
+          <span className="text-xs text-text-secondary font-mono truncate block">
             hman.example.com/app
           </span>
         </div>
       </div>
 
       {/* Master strip */}
-      <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Power className="w-5 h-5 text-green-400" />
-          <div>
+      <div className="px-3 sm:px-5 py-4 border-b border-border flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <Power className="w-5 h-5 text-green-400 shrink-0" />
+          <div className="min-w-0">
             <p className="font-semibold text-text-primary text-sm">Subconscious</p>
             <p className="text-xs text-text-secondary">4 of 4 sensors active</p>
           </div>
         </div>
-        <span className="text-xs px-3 py-1.5 rounded-md bg-background border border-border text-text-secondary">
+        <span className="text-xs px-3 py-1.5 rounded-md bg-background border border-border text-text-secondary shrink-0">
           Stop all
         </span>
       </div>
@@ -439,15 +448,15 @@ function SubconsciousPreview() {
         {PREVIEW_SENSORS.map((s) => {
           const Icon = s.icon
           return (
-            <div key={s.name} className="px-5 py-3 flex items-center gap-4">
+            <div key={s.name} className="px-3 sm:px-5 py-3 flex items-center gap-3 sm:gap-4">
               <div
                 className="h-8 w-8 shrink-0 rounded-lg flex items-center justify-center"
                 style={{ backgroundColor: `${s.color}26`, color: s.color }}
               >
                 <Icon className="w-4 h-4" />
               </div>
-              <div className="w-28 shrink-0">
-                <p className="text-sm font-medium text-text-primary">{s.label}</p>
+              <div className="w-20 sm:w-28 shrink-0 min-w-0">
+                <p className="text-sm font-medium text-text-primary truncate">{s.label}</p>
                 <p className="text-[10px] text-text-secondary leading-tight truncate">
                   {s.chipLabel}
                 </p>
@@ -504,13 +513,13 @@ function Spec({
   const dot =
     tone === 'shipped' ? 'bg-green-400' : 'bg-amber-400'
   return (
-    <div className="flex items-baseline gap-2 text-sm">
+    <div className="flex items-baseline gap-2 text-sm flex-wrap">
       <span
         className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1.5 ${dot}`}
         title={tone === 'shipped' ? 'shipped' : 'planned'}
       />
-      <span className="text-text-secondary min-w-[7rem]">{label}</span>
-      <span className="text-text-primary flex-1">
+      <span className="text-text-secondary min-w-[5rem] sm:min-w-[7rem]">{label}</span>
+      <span className="text-text-primary flex-1 min-w-0 break-words">
         {value}
         {hint && <span className="text-text-secondary text-xs ml-2">({hint})</span>}
       </span>
