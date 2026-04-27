@@ -1,0 +1,16 @@
+PLACEHOLDER — this file is NOT a model.
+
+The shipping `Resemblyzer.mlmodel` (compiled to `.mlmodelc` at build time)
+must be produced from Resemblyzer's pretrained PyTorch encoder using
+`coremltools` against the upstream weights. We can't generate that from
+CI because (a) the conversion needs Python + `torch` + `resemblyzer` +
+`coremltools` installed, (b) the weights ship with the upstream Python
+package as a binary blob the converter has to load.
+
+See `apps/ios/Sources/HMAN/Biometric/README.md` for the one-shot
+conversion command Knox runs locally before producing a TestFlight
+build. Until that file replaces this placeholder, `CoreMLVoiceEncoder`
+throws `.modelMissing` on every `embed(pcm:)` call.
+
+Tests inject a stub encoder via `VoiceBiometric.encoder = …` so the
+pipeline can be exercised without the real model.
