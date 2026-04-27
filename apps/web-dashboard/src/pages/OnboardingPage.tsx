@@ -152,8 +152,8 @@ export function OnboardingPage() {
   if (step === 'intro') {
     return (
       <div className="max-w-2xl">
-        <h1 className="text-3xl font-semibold text-text-primary mb-2">Welcome to .HMAN</h1>
-        <p className="text-text-secondary mb-8">
+        <h1 className="text-2xl sm:text-3xl font-semibold text-text-primary mb-2">Welcome to .HMAN</h1>
+        <p className="text-text-secondary mb-8 text-base">
           Your personal subconscious. Local, encrypted, yours.
         </p>
 
@@ -189,7 +189,7 @@ export function OnboardingPage() {
 
         <button
           onClick={() => setStep('passphrase')}
-          className="px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium inline-flex items-center gap-2"
+          className="min-h-11 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium inline-flex items-center gap-2 text-base"
         >
           Begin enrollment <ArrowRight className="w-4 h-4" />
         </button>
@@ -200,8 +200,8 @@ export function OnboardingPage() {
   if (step === 'passphrase') {
     return (
       <div className="max-w-md">
-        <h1 className="text-3xl font-semibold text-text-primary mb-2">Choose a passphrase</h1>
-        <p className="text-text-secondary mb-6">
+        <h1 className="text-2xl sm:text-3xl font-semibold text-text-primary mb-2">Choose a passphrase</h1>
+        <p className="text-text-secondary mb-6 text-base">
           Encrypts your voice identity at rest. Eight characters minimum. No recovery — lose this
           and you re-enroll.
         </p>
@@ -213,20 +213,20 @@ export function OnboardingPage() {
             value={passphrase}
             onChange={e => setPassphrase(e.target.value)}
             placeholder="Passphrase"
-            className="w-full px-4 py-3 rounded-lg bg-background-secondary border border-border focus:border-blue-500 focus:outline-none text-text-primary"
+            className="w-full min-h-11 px-4 py-3 rounded-lg bg-background-secondary border border-border focus:border-blue-500 focus:outline-none text-text-primary text-base"
           />
           <input
             type="password"
             value={confirm}
             onChange={e => setConfirm(e.target.value)}
             placeholder="Confirm"
-            className="w-full px-4 py-3 rounded-lg bg-background-secondary border border-border focus:border-blue-500 focus:outline-none text-text-primary"
+            className="w-full min-h-11 px-4 py-3 rounded-lg bg-background-secondary border border-border focus:border-blue-500 focus:outline-none text-text-primary text-base"
             onKeyDown={e => e.key === 'Enter' && startSession()}
           />
           {passphraseError && <p className="text-sm text-red-400">{passphraseError}</p>}
           <button
             onClick={startSession}
-            className="w-full px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium"
+            className="w-full min-h-11 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-base"
           >
             Continue
           </button>
@@ -238,37 +238,39 @@ export function OnboardingPage() {
   if (step === 'recording' && session) {
     return (
       <div className="max-w-2xl">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-semibold text-text-primary">
+        <div className="flex items-center justify-between gap-3 mb-6">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-text-primary">
               {done ? 'Review' : `Prompt ${completed + 1} of ${session.total}`}
             </h1>
-            <p className="text-text-secondary">
+            <p className="text-text-secondary text-base">
               {done
                 ? 'All prompts captured. Review consistency then finalize.'
                 : 'Read the line out loud. It advances when you pause.'}
             </p>
           </div>
-          <ProgressRing value={completed / session.total} />
+          <div className="shrink-0">
+            <ProgressRing value={completed / session.total} />
+          </div>
         </div>
 
         {!done && currentPrompt && (
           <>
-            <div className="rounded-lg border border-border bg-background-secondary p-8 mb-6">
-              <p className="text-xl text-text-primary leading-relaxed font-serif">
+            <div className="rounded-lg border border-border bg-background-secondary p-6 sm:p-8 mb-6">
+              <p className="text-lg sm:text-xl text-text-primary leading-relaxed font-serif break-words">
                 "{currentPrompt}"
               </p>
             </div>
 
-            <div className="rounded-lg border border-border bg-background-secondary p-6 mb-6">
+            <div className="rounded-lg border border-border bg-background-secondary p-4 sm:p-6 mb-6">
               <LevelMeter level={rec.level} state={rec.state} />
-              <div className="flex items-center justify-between mt-4">
+              <div className="flex items-center justify-between flex-wrap gap-3 mt-4">
                 <StatusBadge state={rec.state} uploading={uploading} />
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   {rec.state === 'idle' && (
                     <button
                       onClick={() => rec.start()}
-                      className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium inline-flex items-center gap-2"
+                      className="min-h-11 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-base font-medium inline-flex items-center gap-2"
                     >
                       <Play className="w-4 h-4" /> Start listening
                     </button>
@@ -276,7 +278,7 @@ export function OnboardingPage() {
                   {(rec.state === 'listening' || rec.state === 'recording') && (
                     <button
                       onClick={() => rec.pause()}
-                      className="px-3 py-2 rounded-lg bg-background border border-border text-text-secondary hover:text-text-primary text-sm inline-flex items-center gap-2"
+                      className="min-h-11 px-3 py-2 rounded-lg bg-background border border-border text-text-secondary hover:text-text-primary text-base inline-flex items-center gap-2"
                     >
                       <Pause className="w-4 h-4" /> Pause
                     </button>
@@ -284,7 +286,7 @@ export function OnboardingPage() {
                   {rec.state === 'paused' && (
                     <button
                       onClick={() => rec.resume()}
-                      className="px-3 py-2 rounded-lg bg-background border border-border text-text-secondary hover:text-text-primary text-sm inline-flex items-center gap-2"
+                      className="min-h-11 px-3 py-2 rounded-lg bg-background border border-border text-text-secondary hover:text-text-primary text-base inline-flex items-center gap-2"
                     >
                       <Play className="w-4 h-4" /> Resume
                     </button>
@@ -370,7 +372,7 @@ export function OnboardingPage() {
         {done && (
           <button
             onClick={finalize}
-            className="w-full px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium"
+            className="w-full min-h-11 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-base"
           >
             Finalize enrollment
           </button>
@@ -394,8 +396,8 @@ export function OnboardingPage() {
     return (
       <div className="max-w-2xl">
         <div className="flex items-center gap-3 mb-6">
-          <CheckCircle2 className="w-8 h-8 text-green-400" />
-          <h1 className="text-3xl font-semibold text-text-primary">Enrolled</h1>
+          <CheckCircle2 className="w-8 h-8 text-green-400 shrink-0" />
+          <h1 className="text-2xl sm:text-3xl font-semibold text-text-primary">Enrolled</h1>
         </div>
         <p className="text-text-secondary mb-8">
           Your voice identity is saved locally, encrypted at rest. Gate 5 runtime verification lands
@@ -421,14 +423,14 @@ export function OnboardingPage() {
   if (step === 'error') {
     return (
       <div className="max-w-md">
-        <h1 className="text-3xl font-semibold text-red-400 mb-2">Something broke</h1>
-        <p className="text-text-secondary mb-6">{error}</p>
+        <h1 className="text-2xl sm:text-3xl font-semibold text-red-400 mb-2">Something broke</h1>
+        <p className="text-text-secondary mb-6 break-words">{error}</p>
         <button
           onClick={() => {
             setError(null)
             setStep('intro')
           }}
-          className="px-6 py-3 rounded-lg bg-background-secondary border border-border hover:bg-background text-text-primary"
+          className="min-h-11 px-6 py-3 rounded-lg bg-background-secondary border border-border hover:bg-background text-text-primary text-base"
         >
           Back to start
         </button>

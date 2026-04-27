@@ -47,16 +47,16 @@ export function DashboardPage() {
 
   return (
     <div className="max-w-5xl">
-      <div className="flex items-start justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-semibold text-text-primary">.HMAN</h1>
-          <p className="text-text-secondary mt-1">
+      <div className="flex items-start justify-between gap-3 mb-6 sm:mb-8">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-text-primary">.HMAN</h1>
+          <p className="text-text-secondary mt-1 text-base">
             Your local subconscious. Encrypted, yours.
           </p>
         </div>
         <button
           onClick={refresh}
-          className="p-2 rounded-lg hover:bg-background-secondary text-text-secondary"
+          className="shrink-0 min-h-11 min-w-11 p-2 rounded-lg hover:bg-background-secondary text-text-secondary inline-flex items-center justify-center"
           title="Refresh"
         >
           <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
@@ -78,21 +78,21 @@ export function DashboardPage() {
 
       {health && gates && (
         <div
-          className={`rounded-lg border p-5 mb-6 ${
+          className={`rounded-lg border p-4 sm:p-5 mb-6 ${
             allPass
               ? 'border-green-500/40 bg-green-900/10'
               : 'border-amber-500/40 bg-amber-900/10'
           }`}
         >
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
             {allPass ? (
               <ShieldCheck className="w-10 h-10 text-green-400 shrink-0" />
             ) : (
               <ShieldAlert className="w-10 h-10 text-amber-400 shrink-0" />
             )}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <p className="text-lg font-medium text-text-primary">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <p className="text-base sm:text-lg font-medium text-text-primary">
                   {passing}/{total} gates armed
                 </p>
                 {allPass && (
@@ -109,7 +109,7 @@ export function DashboardPage() {
             </div>
             <Link
               to="/app/gates"
-              className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-background-secondary border border-border hover:bg-background text-text-primary text-sm"
+              className="shrink-0 min-h-11 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-background-secondary border border-border hover:bg-background text-text-primary text-base"
             >
               View gates <ArrowRight className="w-4 h-4" />
             </Link>
@@ -163,17 +163,17 @@ export function DashboardPage() {
             {gates.gates.map(g => (
               <div
                 key={g.name}
-                className="flex items-center gap-3 py-2 border-b border-border last:border-b-0"
+                className="flex items-start gap-3 py-2 border-b border-border last:border-b-0 flex-wrap sm:flex-nowrap"
               >
                 {g.passing ? (
-                  <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
+                  <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
                 ) : (
-                  <XCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                  <XCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                 )}
-                <span className="font-medium text-text-primary flex-1 min-w-0 truncate">
+                <span className="font-medium text-text-primary flex-1 min-w-0 break-words">
                   {g.name}
                 </span>
-                <span className="text-xs text-text-secondary truncate max-w-[55%]">
+                <span className="text-xs text-text-secondary w-full sm:w-auto sm:max-w-[55%] sm:truncate pl-7 sm:pl-0">
                   {g.detail}
                 </span>
               </div>
@@ -183,9 +183,9 @@ export function DashboardPage() {
       )}
 
       {health && !health.enrolled && (
-        <div className="rounded-lg border border-blue-500/40 bg-blue-900/10 p-5 flex items-center gap-4">
+        <div className="rounded-lg border border-blue-500/40 bg-blue-900/10 p-4 sm:p-5 flex items-center gap-4 flex-wrap">
           <Mic className="w-6 h-6 text-blue-400 shrink-0" />
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <p className="font-medium text-text-primary">Start onboarding</p>
             <p className="text-sm text-text-secondary">
               Bind your voice. Ten prompts, two minutes. Closes Gate 5.
@@ -193,7 +193,7 @@ export function DashboardPage() {
           </div>
           <Link
             to="/app/onboarding"
-            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium"
+            className="min-h-11 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-base font-medium inline-flex items-center"
           >
             Begin
           </Link>
