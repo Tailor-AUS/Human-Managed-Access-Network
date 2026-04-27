@@ -47,8 +47,10 @@ class KeystrokesSensor(Sensor):
         return _IS_WINDOWS
 
     def pulse(self) -> float:
+        # Called from the API thread; the poll thread mutates key_times
+        # concurrently. Snapshot via tuple() before iterating.
         now = time.time()
-        recent = sum(1 for t in self.key_times if now - t < 0.5)
+        recent = sum(1 for t in tuple(self.key_times) if now - t < 0.5)
         # 8 keys in 500ms = peak (fast typing ~ 100+ wpm)
         return min(1.0, recent / 8.0)
 
@@ -140,7 +142,14 @@ class KeystrokesSensor(Sensor):
         import statistics
         now = time.time()
         cutoff = now - window_sec
-        recent = [t for t in self.key_times if t > cutoff]
+        # _metrics() is reachable from summary(), which is called by
+        # the API thread. Snapshot every deque before iteration so the
+        # poll thread's concurrent mutations can't raise RuntimeError.
+        key_times = tuple(self.key_times)
+        typo_times = tuple(self.typo_times)
+        recent_words = tuple(self.recent_words)
+
+        recent = [t for t in key_times if t > cutoff]
         keys = len(recent)
         wpm = (keys / 5) * (60 / window_sec) if keys else 0.0
 
@@ -162,10 +171,10 @@ class KeystrokesSensor(Sensor):
         intervals = [recent[i] - recent[i - 1] for i in range(1, len(recent))]
         rhythm = statistics.pstdev(intervals) if len(intervals) > 2 else 0.0
 
-        typos = sum(1 for t in self.typo_times if t > cutoff)
+        typos = sum(1 for t in typo_times if t > cutoff)
         typo_rate = (typos / keys) if keys > 5 else 0.0
 
-        words = [w for t, w in self.recent_words if t > cutoff]
+        words = [w for t, w in recent_words if t > cutoff]
         last_ago = (now - recent[-1]) if recent else 999.0
 
         return {

@@ -13,6 +13,7 @@ surface.
 """
 from __future__ import annotations
 
+import asyncio
 import io
 import json
 import os
@@ -677,10 +678,22 @@ def gates():
 import sensors as _sensors  # noqa: E402
 
 
+# Every sensor read endpoint runs the sensor's status()/recent() under
+# asyncio.to_thread. These methods are sync and may touch deques or do
+# small filesystem reads; running them inline on the event loop is what
+# allowed issue #22 — a single slow Win32 enumeration call inside
+# ScreenSensor.summary() blocked the entire FastAPI loop indefinitely
+# while sensor threads kept happily writing to disk. to_thread keeps
+# the event loop free even if a sensor's status() call is slow.
+
+def _all_sensor_statuses() -> list[dict]:
+    return [s.status() for s in _sensors.all_sensors()]
+
+
 @app.get("/api/sensors")
 async def sensors_list():
     """List every sensor and its current status (for the Subconscious page)."""
-    return [s.status() for s in _sensors.all_sensors()]
+    return await asyncio.to_thread(_all_sensor_statuses)
 
 
 @app.get("/api/sensors/{name}/status")
@@ -688,7 +701,7 @@ async def sensor_status(name: str):
     s = _sensors.get(name)
     if s is None:
         raise HTTPException(status_code=404, detail=f"unknown sensor: {name}")
-    return s.status()
+    return await asyncio.to_thread(s.status)
 
 
 @app.post("/api/sensors/{name}/start")
@@ -697,7 +710,7 @@ async def sensor_start(name: str):
     if s is None:
         raise HTTPException(status_code=404, detail=f"unknown sensor: {name}")
     s.start()
-    return s.status()
+    return await asyncio.to_thread(s.status)
 
 
 @app.post("/api/sensors/{name}/stop")
@@ -706,7 +719,7 @@ async def sensor_stop(name: str):
     if s is None:
         raise HTTPException(status_code=404, detail=f"unknown sensor: {name}")
     s.stop()
-    return s.status()
+    return await asyncio.to_thread(s.status)
 
 
 @app.get("/api/sensors/{name}/recent")
@@ -714,23 +727,32 @@ async def sensor_recent(name: str, seconds: int = 3600):
     s = _sensors.get(name)
     if s is None:
         raise HTTPException(status_code=404, detail=f"unknown sensor: {name}")
-    return s.recent(seconds=seconds)
+    # recent() reads JSONL files from disk — must not block the loop.
+    return await asyncio.to_thread(s.recent, seconds)
 
 
-@app.post("/api/sensors/start_all")
-async def sensors_start_all():
-    """Turn on every available sensor."""
+def _start_all_sensors() -> list[dict]:
     for s in _sensors.all_sensors():
         if s.available():
             s.start()
     return [s.status() for s in _sensors.all_sensors()]
 
 
-@app.post("/api/sensors/stop_all")
-async def sensors_stop_all():
+def _stop_all_sensors() -> list[dict]:
     for s in _sensors.all_sensors():
         s.stop()
     return [s.status() for s in _sensors.all_sensors()]
+
+
+@app.post("/api/sensors/start_all")
+async def sensors_start_all():
+    """Turn on every available sensor."""
+    return await asyncio.to_thread(_start_all_sensors)
+
+
+@app.post("/api/sensors/stop_all")
+async def sensors_stop_all():
+    return await asyncio.to_thread(_stop_all_sensors)
 
 
 # ── Dev entrypoint ──────────────────────────────────────────────────
