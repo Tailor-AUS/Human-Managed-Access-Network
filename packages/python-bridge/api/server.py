@@ -1218,6 +1218,50 @@ async def pair_redeem(body: PairRedeemRequest, request: Request):
     return PairRedeemResponse(token=token)
 
 
+# ── Connectors (PACT-mediated external actions) ─────────────────────
+#
+# First implementation: PACT-GitHub. The connector's draft/execute path
+# is gated by Gate 5 freshness — the consent moment must be backed by
+# a recent voice-biometric activation. We register a freshness check
+# that the connectors module calls on every draft/execute request.
+
+from api import connectors as _connectors_router  # noqa: E402
+
+
+def _gate5_freshness_check() -> tuple[bool, str]:
+    """Return ``(ok, reason)`` for the connector module.
+
+    ``ok`` is True iff Gate 5 is armed AND the last accepting activation
+    is within ``GATE5_FRESHNESS_SECONDS`` of *now*. This is the
+    "is this still really the member" check the connector spec calls
+    for at the consent moment.
+    """
+    with _gate5_lock:
+        armed = _gate5_reference is not None
+        last = _gate5_last_activation
+    if not armed:
+        return False, "Gate 5 not armed (call /api/gate5/unlock first)"
+    if last is None:
+        return False, "Gate 5 has no recent successful activation"
+    try:
+        last_dt = datetime.fromisoformat(last)
+        now = datetime.now(last_dt.tzinfo) if last_dt.tzinfo else datetime.now()
+        delta = (now - last_dt).total_seconds()
+    except Exception:
+        return False, "Gate 5 last activation timestamp unparseable"
+    if delta > _connectors_router.GATE5_FRESHNESS_SECONDS:
+        return (
+            False,
+            f"Gate 5 last activation {int(delta)}s ago, "
+            f"freshness window {_connectors_router.GATE5_FRESHNESS_SECONDS}s",
+        )
+    return True, "fresh"
+
+
+_connectors_router.configure_gate5_check(_gate5_freshness_check)
+app.include_router(_connectors_router.router)
+
+
 # ── Dev entrypoint ──────────────────────────────────────────────────
 
 if __name__ == "__main__":
