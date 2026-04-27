@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  HMAN iOS Info.plist
+  ───────────────────
+
+  Capabilities and permissions for Wave 2 sensor work (#14).
+
+  • UIBackgroundModes
+      • audio       — `AVAudioEngine` keeps tapping the input node when the
+                      screen is locked. Required for the always-on ambient
+                      buffer that feeds the receptivity gate.
+      • processing  — periodic background tasks (vault sync, bridge keep-
+                      alive). Hooked up in a later sub-issue, declared here
+                      so we don't need a fresh provisioning round trip later.
+
+  • NSMicrophoneUsageDescription
+      Member-facing string. Shown by iOS the first time we activate the
+      audio session. The wording is intentionally honest about what we do
+      with the audio (kept locally, transcribed only on demand). Don't
+      shorten it without running it past the privacy review.
+
+  • NSMotionUsageDescription
+      Required for `CMHeadphoneMotionManager`. The string explains the
+      consent loop — head-shake / head-nod becomes the gesture for replying
+      to receptivity prompts.
+
+  • NSBluetoothAlwaysUsageDescription
+      Reserved for the future MFi-route-detail work. AirPods route changes
+      themselves are observable without a Bluetooth permission, but if a
+      later PR wants the precise BT peripheral metadata we want the string
+      already shipped.
+
+  Future sub-issues (#16 HealthKit, #17 APNs, #18 voice biometric) will add
+  their own keys here — keep alphabetical order within `<dict>`.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDisplayName</key>
+    <string>HMAN</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleName</key>
+    <string>HMAN</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>NSBluetoothAlwaysUsageDescription</key>
+    <string>HMAN reads which audio route is active (e.g. AirPods) so the receptivity gate can decide when it's appropriate to speak. We don't pair, scan for, or store data about other Bluetooth devices.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>HMAN listens to short ambient samples (held only in memory, never written to disk) so the receptivity gate can tell whether you're in a moment that's worth surfacing — and only sends a transcript to your local bridge when you've consented.</string>
+    <key>NSMotionUsageDescription</key>
+    <string>HMAN reads AirPods head motion so a head-shake or head-nod can be a private "no" or "yes" reply to the gate's prompts. Motion data is processed on-device and never leaves your phone.</string>
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>audio</string>
+        <string>processing</string>
+    </array>
+    <key>UILaunchScreen</key>
+    <dict/>
+    <key>UIRequiredDeviceCapabilities</key>
+    <array>
+        <string>arm64</string>
+    </array>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+    </array>
+</dict>
+</plist>
