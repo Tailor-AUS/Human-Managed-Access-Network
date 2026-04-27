@@ -105,6 +105,16 @@ export interface VoiceRespondResult {
   tts_url: string | null
 }
 
+export interface PairBegin {
+  code: string
+  url: string
+  expires_at: number   // unix epoch seconds
+}
+
+export interface PairRedeem {
+  token: string
+}
+
 async function j<T>(r: Response): Promise<T> {
   if (!r.ok) {
     const body = await r.text().catch(() => '')
@@ -179,6 +189,26 @@ export const hman = {
   async gate5Lock(): Promise<{ armed: boolean }> {
     return j(
       await fetch(`${BASE}/api/gate5/lock`, { method: 'POST', headers: authHeaders() }),
+    )
+  },
+
+  // QR-code phone pairing — auth-exempt on the bridge side.
+  async pairBegin(): Promise<PairBegin> {
+    return j(
+      await fetch(`${BASE}/api/pair/begin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+  },
+
+  async pairRedeem(code: string): Promise<PairRedeem> {
+    return j(
+      await fetch(`${BASE}/api/pair/redeem`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      }),
     )
   },
 

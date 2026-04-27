@@ -7,6 +7,8 @@ import {
   OnboardingPage,
   MemoryPage,
   SettingsPage,
+  PairPage,
+  RedeemPage,
 } from './pages'
 
 function GatedLayout() {
@@ -25,6 +27,10 @@ function App() {
     <Routes>
       {/* Public front door — no chrome, no sidebar */}
       <Route path="/" element={<WelcomePage />} />
+
+      {/* QR-pairing — both sides are auth-exempt; phone scans desktop's QR */}
+      <Route path="/pair" element={<PairPage />} />
+      <Route path="/redeem" element={<RedeemPage />} />
 
       {/* Member app — under /app, with chrome + bridge auth gate */}
       <Route path="/app" element={<GatedLayout />}>

@@ -99,7 +99,16 @@ app.add_middleware(
 # closed when reachable over a tunnel or public URL.
 _AUTH_TOKEN = os.environ.get("HMAN_AUTH_TOKEN", "").strip() or None
 
-_PUBLIC_PATHS = {"/", "/openapi.json", "/docs", "/redoc", "/docs/oauth2-redirect"}
+_PUBLIC_PATHS = {
+    "/",
+    "/openapi.json",
+    "/docs",
+    "/redoc",
+    "/docs/oauth2-redirect",
+    # QR-pairing endpoints — phone has no token yet, that's the whole point
+    "/api/pair/begin",
+    "/api/pair/redeem",
+}
 
 
 def _cors_headers_for(origin: str | None) -> dict[str, str]:
@@ -1085,6 +1094,128 @@ def receptivity_budget_use(body: RecordVoiceUsageIn):
         max_interruptions=updated.max_interruptions,
         budget_exhausted=updated.budget_exhausted,
     )
+
+
+# ── QR-code pairing (Wave 1) ────────────────────────────────────────
+#
+# A new phone joining the deployment shouldn't have to read or copy-paste
+# a 48-char hex token. The desktop dashboard renders a QR encoding a
+# one-time pairing URL; the phone scans → SWA hits /redeem → bearer
+# token transfers automatically.
+#
+# Both endpoints are auth-exempt (see _PUBLIC_PATHS) — they are the
+# bootstrap path for a device that has nothing yet. Defenses in depth:
+#   - Codes are 6 chars from a 32-char confusable-free alphabet (~32^6
+#     ≈ 1B). Brute-force at 3 attempts per code is hopeless.
+#   - 60s TTL is the security ceiling.
+#   - Single-use; redeemed codes are dropped immediately.
+#   - Begin-rate limit: 10/min per remote IP.
+#   - State is in-process only — never written to disk or vault.
+
+class PairBeginResponse(BaseModel):
+    code: str
+    url: str
+    expires_at: float   # unix epoch seconds
+
+
+class PairRedeemRequest(BaseModel):
+    code: str
+
+
+class PairRedeemResponse(BaseModel):
+    token: str
+
+
+def _log_pair_event(event: str, **fields) -> None:
+    """Append a pairing event to gate_events.jsonl (the existing audit log)."""
+    record = {
+        "ts": datetime.now(core.AEST).isoformat(),
+        "gate": "pair",
+        "event": event,
+        **fields,
+    }
+    try:
+        with open(core.LOGS_DIR / "gate_events.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps(record) + "\n")
+    except Exception:
+        pass
+
+
+def _pair_remote_ip(request: Request) -> str:
+    """Best-effort remote IP. Honours X-Forwarded-For when present (relay)."""
+    xff = request.headers.get("x-forwarded-for", "")
+    if xff:
+        return xff.split(",")[0].strip()
+    if request.client and request.client.host:
+        return request.client.host
+    return "unknown"
+
+
+@app.post("/api/pair/begin", response_model=PairBeginResponse)
+async def pair_begin(request: Request):
+    """Mint a fresh 6-char pairing code with 60s TTL.
+
+    The phone hits /redeem?code=XXXXXX with the returned URL. If
+    HMAN_AUTH_TOKEN is unset (dev mode), the redeemed token is the
+    empty string — the dev bridge accepts that anyway.
+    """
+    remote_ip = _pair_remote_ip(request)
+
+    # Determine the base URL the phone should hit. Prefer explicit
+    # HMAN_PUBLIC_URL so the SWA origin is correct in production; fall
+    # back to the request's own origin (good enough for dev / LAN).
+    base_url = (
+        os.environ.get("HMAN_PUBLIC_URL", "").strip()
+        or request.headers.get("origin", "").strip()
+        or f"{request.url.scheme}://{request.url.netloc}"
+    )
+
+    # In dev mode the bearer token may be empty. That's fine — the dev
+    # bridge has auth disabled, so the phone won't need a token to talk
+    # to it. Still hand back a placeholder so the redeem flow is uniform.
+    bearer = _AUTH_TOKEN or ""
+
+    try:
+        entry, redeem_url = core.begin_pairing(
+            token=bearer, base_url=base_url, remote_ip=remote_ip
+        )
+    except ValueError as e:
+        _log_pair_event("begin_rate_limited", remote_ip=remote_ip, reason=str(e))
+        raise HTTPException(status_code=429, detail="too many pairing requests")
+
+    _log_pair_event("begin", remote_ip=remote_ip, expires_in=core.PAIRING_TTL_SECONDS)
+    return PairBeginResponse(
+        code=entry.code,
+        url=redeem_url,
+        expires_at=entry.expires_at,
+    )
+
+
+@app.post("/api/pair/redeem", response_model=PairRedeemResponse)
+async def pair_redeem(body: PairRedeemRequest, request: Request):
+    """Single-use redemption. Returns the bearer token on success.
+
+    The phone calls this after scanning the QR. On success the response
+    contains the token to put in localStorage; on any failure mode
+    (expired, redeemed, unknown, exhausted attempts) the phone should
+    show the failure reason and prompt the user to start over on
+    desktop.
+    """
+    remote_ip = _pair_remote_ip(request)
+    code = (body.code or "").strip().upper()
+    try:
+        token = core.redeem_pairing(code)
+    except core.PairingError as e:
+        _log_pair_event(
+            "redeem_fail",
+            remote_ip=remote_ip,
+            code_prefix=code[:2] if code else "",
+            reason=e.reason,
+        )
+        raise HTTPException(status_code=e.status, detail=e.reason)
+
+    _log_pair_event("redeem_success", remote_ip=remote_ip, code_prefix=code[:2])
+    return PairRedeemResponse(token=token)
 
 
 # ── Dev entrypoint ──────────────────────────────────────────────────
