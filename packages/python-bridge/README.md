@@ -91,6 +91,44 @@ the reference, and write the encrypted file to `~/.hman/identity/`.
   model downloads only happen the first time you run (and can be done
   offline by pre-placing cached models).
 
+## EEG hardware compatibility
+
+The EEG sensor (`sensors/eeg.py`) communicates with Muse headbands over
+Bluetooth LE using the published Muse S characteristic UUIDs.
+
+| Device | Status | Notes |
+|---|---|---|
+| Muse S (Gen 2) | ✓ Supported | Preset 21 (`p21`) or start command |
+| Muse 2 | ✓ Supported | Preset fallback sequence |
+| **Muse S Athena** | **✗ Not supported** | See below |
+
+### Muse S Athena
+
+The Athena firmware (MAC OUI `00:55:DA:`, advertises as `MuseS-<suffix>`)
+rejects **every** documented preset and start command with `rc:69`.  The
+control characteristic responds to wake / version queries (`rc:0`), confirming
+the BLE connection is live, but no data ever flows.
+
+When an Athena device is detected, the bridge sets:
+
+```
+last_error: "Muse S Athena firmware is not yet supported. ..."
+```
+
+and **stops the sensor** immediately instead of looping indefinitely with
+`packets: 0`.
+
+**Next steps tracked in the GitHub issue:**
+
+- Capture BLE traffic from the official Muse app streaming to an Athena
+  device and diff against our command set.
+- Evaluate the [`muselsl`](https://github.com/alexandrebarachant/muse-lsl)
+  library which claims Athena support and could sit behind a feature flag
+  so existing Muse S / Muse 2 users are not regressed.
+
+Until one of the above is resolved, **connect a Muse S Gen 2 or Muse 2**
+to use the EEG sensor.
+
 ## MIT License
 
 See [LICENSE](../../LICENSE) at the repo root.
