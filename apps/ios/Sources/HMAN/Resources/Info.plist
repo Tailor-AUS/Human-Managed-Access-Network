@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+		Member-facing usage strings. iOS surfaces these verbatim in
+		the HealthKit permission sheet, so they need to be honest about
+		why HMAN reads each value and what stays on the device.
+
+		HMAN never writes to HealthKit, so NSHealthUpdateUsageDescription
+		is intentionally omitted. The matching capability lives in the
+		entitlements file (HealthKit, no Background Delivery yet).
+	-->
+	<key>NSHealthShareUsageDescription</key>
+	<string>HMAN reads your heart rate, heart-rate variability, recent motion, and last night's sleep so it can tell when you're stressed or recovering and avoid interrupting at a bad moment. Raw values stay on this device — only a coarse "interrupt OK" or "wait" hint is shared with the rest of HMAN.</string>
+</dict>
+</plist>
