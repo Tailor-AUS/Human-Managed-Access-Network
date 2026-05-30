@@ -93,6 +93,26 @@ export {
   type Ed25519KeyPair,
 } from './entity/index.js';
 
+// Organisation module — business/collective equivalent (PROTOCOL.md § Organisation Model)
+export {
+  OrganisationManager,
+  OrgError,
+  OrgErrorCode,
+  MemoryOrganisationStorage,
+  tallyVotes,
+  isAccepted,
+  isDecided,
+  outcomeOf,
+  VOTE_DECISIONS,
+  type OrganisationStorage,
+  type OrganisationManagerConfig,
+  type CreateOrganisationInput,
+  type JoinRequestInput,
+  type InviteInput,
+  type OpenProposalInput,
+  type CastVoteInput,
+} from './organisation/index.js';
+
 // Payment rail adapters (PROTOCOL.md § Payment Rail Adapters)
 export {
   RailRegistry,

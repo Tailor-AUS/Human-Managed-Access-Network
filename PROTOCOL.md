@@ -8,6 +8,7 @@
 Both are joined by three cross-cutting specifications:
 
 - **[Multi-Entity Model](#multi-entity-model)** — how one member runs multiple entities (Personal, Trade, Household, ...) with independent keys and rails.
+- **[Organisation Model](#organisation-model)** — how many registered HMANs join a standing collective (business / co-op / DAO), governed by PACT consensus.
 - **[Payment Rail Adapters](#payment-rail-adapters)** — the pluggable interface for PayID, OSKO/NPP, BPay, Stripe, ...
 - **[Receptivity Channels](#receptivity-channels)** — how a signal reaches the member (silent / ambient / whisper / haptic / confirm / interrupt), enforcing Gate #4.
 
@@ -388,6 +389,111 @@ type Entity = {
 ```
 
 Storage layout proposal: `~/.hman/entities/<uuid>/{config.json, audit.jsonl, vaults/}`. Root identity material and the encrypted `key_priv_ref` for each entity live in the root vault at `~/.hman/identity/`.
+
+---
+
+## Organisation Model
+
+Where the Multi-Entity Model describes the *personas of one member*, the Organisation Model describes a **standing collective** that *many* members join. It is the business / company / co-op / DAO equivalent of an .HMAN member: it has its own signing identity, its own nominated payment rails, and acts as a single counterparty in the Peer Protocol — but its membership and its decisions are governed by **PACT**.
+
+An organisation is *not* a member's persona. A member is still themselves; joining an org grants one of the member's entities a role inside a collective whose key is held jointly by the org's controllers.
+
+### What joins
+
+A **registered HMAN** joins as a specific *entity* (persona) under a member — not the whole member. So "Knox's Trade entity" can be an `admin` of *Acme Co-op* while "Knox's Personal entity" stays out. The membership records both the `member_id` (root identity) and the `entity_id` (the persona that joins), plus that entity's published Ed25519 public key so the org can verify its signatures without a directory lookup.
+
+### Roles & status
+
+```
+OrgRole:           owner · admin · member · observer
+MembershipStatus:  invited · requested · active · suspended · revoked
+```
+
+- `owner` — founder-level, cannot be removed by a vote.
+- `admin` — can invite / admit / suspend members and open proposals.
+- `member` — ordinary voting member.
+- `observer` — in the roster, no vote, no admit rights.
+
+### Joining is a two-sided PACT
+
+A membership only becomes `active` once a complete **join pact** exists: the joining entity signs its consent *and* the organisation signs its admission, both over the *identical* canonical body (`domain: hman.org.join`). Two ways in:
+
+```
+Request flow (HMAN-initiated):
+  1. requestToJoin   → HMAN's entity signs consent; membership = requested
+  2. admitMember     → org signs admission; membership = active        (founder/admins rule)
+     or openProposal(admit_member) + votes → consensus admits          (quorum rule)
+
+Invite flow (org-initiated):
+  1. inviteMember    → org signs admission; membership = invited
+  2. acceptInvite    → HMAN's entity signs consent; membership = active
+```
+
+The assembled `OrgJoinAttestation` carries both signatures + both public keys and is independently verifiable by any third party against the org's published key — exactly the `PACTAttestation` envelope pattern already used by the connectors module.
+
+### Governance — consensus over the collective (PACT)
+
+Collective decisions are **proposals** resolved by **signed votes** against a governance policy:
+
+```ts
+type OrgGovernancePolicy = {
+  admission_rule:     "founder" | "admins" | "quorum";
+  quorum:             number;   // fraction of eligible voters that must cast a vote
+  approval_threshold: number;   // fraction of decisive (non-abstain) votes that must approve
+  voting_roles:       OrgRole[];
+  proposal_ttl_seconds: number;
+};
+```
+
+Proposal kinds: `admit_member`, `remove_member`, `change_role`, `update_governance`, `custom`.
+
+A proposal is **accepted** when both hold:
+
+```
+quorum_met:  cast / eligible            >= quorum
+threshold:   approve / (approve+reject) >= approval_threshold
+```
+
+`abstain` counts toward quorum (participation) but not toward the approval ratio. Each vote is an Ed25519 signature by the voter's entity over `domain: hman.org.vote`. The terminal result is sealed as a `PactConsensusRecord` signed by the org key (`domain: hman.org.consensus`), so the outcome is itself tamper-evident — PACT's notion of an agreed *truth*. When an accepted proposal carries an effect (admit, remove, role change, governance amendment) the manager applies it atomically and links the membership's join attestation back to the deciding proposal via `consensus_ref`.
+
+### Rules
+
+- An org has exactly one `owner` (the founder) at creation; ownership cannot be voted away.
+- An entity has at most one *live* (non-revoked) membership per org.
+- Eligible voters = `active` members holding a role in `voting_roles`. An org with zero eligible voters can never reach quorum (consensus is impossible until someone can vote).
+- Direct admission is refused under the `quorum` rule — admission must go through an `admit_member` proposal.
+- The org's secret key follows the same seal / unseal / wipe lifecycle as entity keys; voters sign with their own entity keys, which their node holds.
+
+### Data Model (Phase 2)
+
+```ts
+type Organisation = {
+  id: string;                          // UUID
+  kind: OrgKind;                       // company | cooperative | association | dao | partnership
+  display_name: string;
+  founder_member_id: string;
+  key_pub: string;                     // Ed25519 public key (base64)
+  nominated_rails: PaymentRailNomination[];
+  governance: OrgGovernancePolicy;
+  status: "active" | "suspended" | "dissolved";
+  metadata?: Record<string, string>;   // ABN, jurisdiction, mission, …
+};
+
+type OrgMembership = {
+  id: string;
+  org_id: string;
+  member_id: string;                   // root identity of the joining HMAN
+  entity_id: string;                   // the persona that joined
+  entity_pub: string;                  // Ed25519 public key (base64)
+  role: OrgRole;
+  status: MembershipStatus;
+  join_attestation?: OrgJoinAttestation;  // present once active
+};
+```
+
+Storage layout proposal: `~/.hman/orgs/<uuid>/{config.json, key.enc, members.jsonl, proposals/, audit.jsonl}`. Reference implementation: `@hman/core` → `OrganisationManager` (`packages/core/src/organisation/`).
+
+> PACT note: the consensus *arithmetic* (`tallyVotes`, quorum + threshold) is implemented locally in `packages/core/src/organisation/pact-consensus.ts`; the canonical PACT wire format lives in the external `github.com/TailorAU/pact` repo (CLAUDE.md § PACT relationship). The shapes above are the .HMAN-side envelopes and will be narrowed when the external spec pins the encoding.
 
 ---
 

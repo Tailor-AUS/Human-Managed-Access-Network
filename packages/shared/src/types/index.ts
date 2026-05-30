@@ -84,6 +84,32 @@ export {
   type CognitiveLoadOverride,
 } from './entity.js';
 
+// Organisation model (PROTOCOL.md § Organisation Model)
+export {
+  OrgKind,
+  OrgStatus,
+  OrgRole,
+  MembershipStatus,
+  AdmissionRule,
+  ProposalKind,
+  ProposalStatus,
+  DEFAULT_ORG_GOVERNANCE,
+  type OrganisationId,
+  type MembershipId,
+  type ProposalId,
+  type OrgGovernancePolicy,
+  type Organisation,
+  type OrgKeyData,
+  type OrgMembership,
+  type OrgJoinAttestation,
+  type PactProposal,
+  type PactVote,
+  type PactTally,
+  type PactConsensusRecord,
+  type VoteDecision,
+  type OrgAuditEvent,
+} from './organisation.js';
+
 // Payment Rail Adapter protocol (PROTOCOL.md § Payment Rail Adapters)
 export {
   type Money,

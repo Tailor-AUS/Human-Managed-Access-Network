@@ -37,6 +37,11 @@ import {
   migrateToMultiEntity,
   type EntityStorage,
 } from './entity/index.js';
+import {
+  OrganisationManager,
+  MemoryOrganisationStorage,
+  type OrganisationStorage,
+} from './organisation/index.js';
 
 export interface HmanSDKConfig {
   /** Custom vault storage (defaults to in-memory) */
@@ -45,6 +50,8 @@ export interface HmanSDKConfig {
   auditStorage?: AuditStorage;
   /** Custom entity storage (defaults to in-memory) */
   entityStorage?: EntityStorage;
+  /** Custom organisation storage (defaults to in-memory) */
+  organisationStorage?: OrganisationStorage;
   /** Root member identifier. Auto-generated when omitted. */
   memberId?: string;
   /** Handler for gated access requests */
@@ -62,6 +69,7 @@ export class HmanSDK {
   readonly auditLogger: AuditLogger;
   readonly gate: Gate;
   readonly entityManager: EntityManager;
+  readonly organisationManager: OrganisationManager;
 
   private masterKeyData: MasterKeyData | null = null;
 
@@ -70,13 +78,15 @@ export class HmanSDK {
     vaultManager: VaultManager,
     auditLogger: AuditLogger,
     gate: Gate,
-    entityManager: EntityManager
+    entityManager: EntityManager,
+    organisationManager: OrganisationManager
   ) {
     this.keyManager = keyManager;
     this.vaultManager = vaultManager;
     this.auditLogger = auditLogger;
     this.gate = gate;
     this.entityManager = entityManager;
+    this.organisationManager = organisationManager;
   }
 
   /**
@@ -384,5 +394,20 @@ export async function createHmanSDK(config: HmanSDKConfig = {}): Promise<HmanSDK
     memberId: config.memberId ?? 'member-local',
   });
 
-  return new HmanSDK(keyManager, vaultManager, auditLogger, gate, entityManager);
+  // Create organisation manager (collective/business equivalent). Shares the
+  // key manager so org signing keys and member entity keys live in one place.
+  const organisationStorage = config.organisationStorage ?? new MemoryOrganisationStorage();
+  const organisationManager = new OrganisationManager({
+    storage: organisationStorage,
+    keyManager,
+  });
+
+  return new HmanSDK(
+    keyManager,
+    vaultManager,
+    auditLogger,
+    gate,
+    entityManager,
+    organisationManager
+  );
 }
