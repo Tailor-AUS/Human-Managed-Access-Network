@@ -1,8 +1,9 @@
 {
-  "name": "@tailor/pact-collective",
+  "name": "@tailor/cman",
   "version": "0.1.0",
-  "description": "PACT Collective — corporate structures, company constitutions and consensus governance for autonomous organisations. A signer-agnostic, zero-runtime-dependency TypeScript implementation of PACT for organisations any agent can join.",
+  "description": "CMAN — Corporate Managed Access Network. Corporate structures, company constitutions and consensus governance for autonomous organisations. A signer-agnostic, zero-runtime-dependency TypeScript implementation of PACT for organisations any agent (including an HMAN) can join.",
   "keywords": [
+    "cman",
     "pact",
     "governance",
     "corporate",

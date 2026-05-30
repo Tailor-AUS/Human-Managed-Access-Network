@@ -1,10 +1,10 @@
-# PACT Collective
+# CMAN — Corporate Managed Access Network
 
 **Corporate structures, company constitutions and consensus governance for autonomous organisations.**
 
-`@tailor/pact-collective` is a signer-agnostic, **zero-runtime-dependency** TypeScript library for forming and running organisations that any registered identity — a person, an agent, an [.HMAN](https://github.com/Tailor-AUS/Human-Managed-Access-Network), a DID, or another organisation — can join. It implements [PACT](https://github.com/TailorAU/pact) (the protocol for inter-agent consensus and truth) as **corporate governance**: every membership is a signed two-sided *join pact*, every decision is a signed resolution sealed by a tamper-evident consensus record, and the rules of the game live in a versioned, amendable **company constitution**.
+**CMAN** (`@tailor/cman`) is a signer-agnostic, **zero-runtime-dependency** TypeScript library for forming and running organisations that any registered identity — a person, an agent, an [HMAN](https://github.com/Tailor-AUS/Human-Managed-Access-Network), a DID, or another organisation — can join. It implements [PACT](https://github.com/TailorAU/pact) (the protocol for inter-agent consensus and truth) as **corporate governance**: every membership is a signed two-sided *join pact*, every decision is a signed resolution sealed by a tamper-evident consensus record, and the rules of the game live in a versioned, amendable **company constitution**.
 
-It is the organisational counterpart to a sovereign individual agent: where an individual acts for themselves, a Collective is a standing legal person that many members own, govern and act through.
+CMAN is to organisations what [HMAN](https://github.com/Tailor-AUS/Human-Managed-Access-Network) (Human Managed Access Network) is to individuals. Where an HMAN is a sovereign agent acting for one human, a CMAN is a standing legal person that many members own, govern and act through — **HMANs federate into a CMAN**.
 
 > **Status:** `0.1.0`, MIT-licensed. The type model and crypto envelopes mirror the PACT spec; they will be narrowed as the canonical PACT wire format is pinned.
 
@@ -12,7 +12,7 @@ It is the organisational counterpart to a sovereign individual agent: where an i
 
 ## Why
 
-Real organisations are not flat membership lists. They are **corporate structures**: shares and share classes, directors and officers, a board and a general meeting, ordinary and special resolutions, quorums, and — above all — a **constitution** that says who may do what and how decisions carry. PACT Collective models these directly so software organisations can be governed the way legal ones are, with cryptographic proof at every step.
+Real organisations are not flat membership lists. They are **corporate structures**: shares and share classes, directors and officers, a board and a general meeting, ordinary and special resolutions, quorums, and — above all — a **constitution** that says who may do what and how decisions carry. CMAN models these directly so software organisations can be governed the way legal ones are, with cryptographic proof at every step.
 
 ## Features
 
@@ -27,7 +27,7 @@ Real organisations are not flat membership lists. They are **corporate structure
 ## Install
 
 ```bash
-npm install @tailor/pact-collective
+npm install @tailor/cman
 ```
 
 Requires Node 18+ (uses built-in Ed25519 and `structuredClone`). No runtime dependencies.
@@ -43,7 +43,7 @@ import {
   LegalForm,
   OrgRole,
   ResolutionKind,
-} from '@tailor/pact-collective';
+} from '@tailor/cman';
 
 // Crypto: a keystore that holds signing keys + a verifier. Swap for your own.
 const keys = new MemoryKeyStore();
@@ -154,7 +154,7 @@ The included `MemoryKeyStore` + `Ed25519Verifier` use Node's built-in Ed25519 (r
 ## Relationship to PACT and .HMAN
 
 - **PACT** (`github.com/TailorAU/pact`) is the underlying protocol for inter-agent consensus and truth. This library is *one* implementation of PACT, specialised to corporate governance. The signed envelopes (join pacts, votes, consensus seals) mirror the PACT shapes and will be narrowed to the canonical wire format as it is pinned.
-- **.HMAN** (`github.com/Tailor-AUS/Human-Managed-Access-Network`) is the sovereign individual-agent platform. A Collective is the organisation an .HMAN joins: each .HMAN supplies a `SignerProvider` over its own keys and becomes a member, director or shareholder, voting with its own signature.
+- **HMAN** (`github.com/Tailor-AUS/Human-Managed-Access-Network`) — the Human Managed Access Network — is the sovereign individual-agent platform. A CMAN is the organisation an HMAN joins: each HMAN supplies a `SignerProvider` over its own keys and becomes a member, director or shareholder, voting with its own signature. The `Collective` class is the engine that runs a CMAN.
 
 ## API surface
 
