@@ -1,9 +1,9 @@
 {
-  "name": "@tailor/cman",
+  "name": "@tailor/bman",
   "version": "0.1.0",
-  "description": "CMAN — Corporate Managed Access Network. Corporate structures, company constitutions and consensus governance for autonomous organisations. A signer-agnostic, zero-runtime-dependency TypeScript implementation of PACT for organisations any agent (including an HMAN) can join.",
+  "description": "BMAN — Business Managed Access Network. Corporate structures, company constitutions and consensus governance for autonomous organisations. A signer-agnostic, zero-runtime-dependency TypeScript implementation of PACT for organisations any agent (including an HMAN) can join.",
   "keywords": [
-    "cman",
+    "bman",
     "pact",
     "governance",
     "corporate",

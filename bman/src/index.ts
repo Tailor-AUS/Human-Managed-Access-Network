@@ -1,10 +1,10 @@
 /**
- * @tailor/cman — CMAN, the Corporate Managed Access Network.
+ * @tailor/bman — BMAN, the Business Managed Access Network.
  *
  * Corporate structures, company constitutions and consensus governance for
  * autonomous organisations — a signer-agnostic, zero-runtime-dependency
  * TypeScript implementation of PACT for organisations any agent (including an
- * HMAN) can join. HMANs federate into a CMAN.
+ * HMAN) can join. HMANs federate into a BMAN.
  *
  * Entry points:
  *   - {@link Collective} — the manager (incorporate, join, shares, governance, resolutions).
