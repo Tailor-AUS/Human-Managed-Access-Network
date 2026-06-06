@@ -291,6 +291,8 @@ export {
   parseDraftReply,
   OllamaLLMClient,
   FetchGitHubClient,
+  resolveOllamaEndpoint,
+  resolveOllamaModel,
   type Connector,
   type Intention,
   type ExecutionResult as ConnectorExecutionResult,

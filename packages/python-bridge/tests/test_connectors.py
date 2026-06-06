@@ -249,6 +249,58 @@ def test_github_connector_execute_returns_error_when_token_missing():
     assert "HMAN_GITHUB_TOKEN not set" in (result.error or "")
 
 
+def test_llm_endpoint_derived_from_shared_ollama_url(monkeypatch):
+    """A single HMAN_OLLAMA_URL must steer the drafting connector too, so the
+    voice loop and the GitHub drafter hit the *same* local inference box
+    (e.g. an RTX/DGX Spark on the LAN) instead of the connector silently
+    falling back to localhost."""
+    monkeypatch.delenv("HMAN_LLM_ENDPOINT", raising=False)
+    monkeypatch.setenv("HMAN_OLLAMA_URL", "http://spark.local:11434")
+    for mod in list(sys.modules):
+        if mod.startswith("connectors"):
+            del sys.modules[mod]
+    from connectors.github import GitHubConnectorConfig
+
+    cfg = GitHubConnectorConfig.from_env()
+    assert cfg.llm_endpoint == "http://spark.local:11434/api/chat"
+
+
+def test_llm_endpoint_explicit_override_wins(monkeypatch):
+    monkeypatch.setenv("HMAN_OLLAMA_URL", "http://spark.local:11434")
+    monkeypatch.setenv("HMAN_LLM_ENDPOINT", "http://gpu-rig:9000/api/chat")
+    for mod in list(sys.modules):
+        if mod.startswith("connectors"):
+            del sys.modules[mod]
+    from connectors.github import GitHubConnectorConfig
+
+    cfg = GitHubConnectorConfig.from_env()
+    assert cfg.llm_endpoint == "http://gpu-rig:9000/api/chat"
+
+
+def test_llm_endpoint_default_when_unset(monkeypatch):
+    monkeypatch.delenv("HMAN_LLM_ENDPOINT", raising=False)
+    monkeypatch.delenv("HMAN_OLLAMA_URL", raising=False)
+    for mod in list(sys.modules):
+        if mod.startswith("connectors"):
+            del sys.modules[mod]
+    from connectors.github import GitHubConnectorConfig
+
+    cfg = GitHubConnectorConfig.from_env()
+    assert cfg.llm_endpoint == "http://localhost:11434/api/chat"
+
+
+def test_llm_model_falls_back_to_voice_model(monkeypatch):
+    monkeypatch.delenv("HMAN_LLM_MODEL", raising=False)
+    monkeypatch.setenv("HMAN_VOICE_MODEL", "llama3.1:8b")
+    for mod in list(sys.modules):
+        if mod.startswith("connectors"):
+            del sys.modules[mod]
+    from connectors.github import GitHubConnectorConfig
+
+    cfg = GitHubConnectorConfig.from_env()
+    assert cfg.llm_model == "llama3.1:8b"
+
+
 def test_audit_append_event_writes_jsonl(tmp_path, monkeypatch):
     monkeypatch.setenv("HMAN_DATA_DIR", str(tmp_path))
     # reload audit so it picks up new env

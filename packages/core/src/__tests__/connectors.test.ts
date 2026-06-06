@@ -19,6 +19,7 @@ import {
   signAttestation,
 } from '../connectors/github.js';
 import type { GitHubClient, LLMClient } from '../connectors/types.js';
+import { resolveOllamaEndpoint, resolveOllamaModel } from '../connectors/types.js';
 import type { Intention, PACTAttestation } from '../connectors/Connector.js';
 
 class StubLLM implements LLMClient {
@@ -347,5 +348,44 @@ describe('GitHubConnector.undo', () => {
       },
     });
     expect(stub.lastClose).toBeUndefined();
+  });
+});
+
+describe('resolveOllamaEndpoint', () => {
+  it('derives the chat URL from the shared HMAN_OLLAMA_URL', () => {
+    // One env var must steer both the voice loop and the drafting connector
+    // to the same local inference box (e.g. an RTX/DGX Spark on the LAN).
+    expect(resolveOllamaEndpoint({ HMAN_OLLAMA_URL: 'http://spark.local:11434' })).toBe(
+      'http://spark.local:11434/api/chat',
+    );
+  });
+
+  it('trims a trailing slash on the base URL', () => {
+    expect(resolveOllamaEndpoint({ HMAN_OLLAMA_URL: 'http://spark.local:11434/' })).toBe(
+      'http://spark.local:11434/api/chat',
+    );
+  });
+
+  it('lets an explicit HMAN_LLM_ENDPOINT win', () => {
+    expect(
+      resolveOllamaEndpoint({
+        HMAN_OLLAMA_URL: 'http://spark.local:11434',
+        HMAN_LLM_ENDPOINT: 'http://gpu-rig:9000/api/chat',
+      }),
+    ).toBe('http://gpu-rig:9000/api/chat');
+  });
+
+  it('falls back to localhost when nothing is set', () => {
+    expect(resolveOllamaEndpoint({})).toBe('http://localhost:11434/api/chat');
+  });
+});
+
+describe('resolveOllamaModel', () => {
+  it('falls back to the voice model, then the hardcoded default', () => {
+    expect(resolveOllamaModel({ HMAN_VOICE_MODEL: 'llama3.1:8b' })).toBe('llama3.1:8b');
+    expect(resolveOllamaModel({ HMAN_LLM_MODEL: 'qwen2.5:7b', HMAN_VOICE_MODEL: 'x' })).toBe(
+      'qwen2.5:7b',
+    );
+    expect(resolveOllamaModel({})).toBe('llama3.2:3b');
   });
 });

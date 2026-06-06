@@ -31,6 +31,8 @@ export {
 export {
   OllamaLLMClient,
   FetchGitHubClient,
+  resolveOllamaEndpoint,
+  resolveOllamaModel,
   type LLMClient,
   type GitHubClient,
 } from './types.js';

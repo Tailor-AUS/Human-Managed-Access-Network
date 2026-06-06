@@ -20,16 +20,55 @@ export interface LLMClient {
 }
 
 /**
- * Default Ollama-backed LLM client. Hits ``http://localhost:11434/api/chat``
- * with the model name caller specifies.  No retries, no streaming — the
- * connector's ``draft`` step is single-shot and small.
+ * Resolve the default Ollama chat endpoint from the environment.
+ *
+ * Precedence (mirrors the Python bridge's ``_resolve_llm_endpoint`` so both
+ * runtimes point at the same box):
+ *   1. ``HMAN_LLM_ENDPOINT`` — explicit full chat URL.
+ *   2. ``HMAN_OLLAMA_URL``   — base URL the voice loop also reads; we append
+ *      ``/api/chat`` so one var aims the whole stack at a single local
+ *      inference box, e.g. an NVIDIA RTX/DGX Spark at
+ *      ``http://spark.local:11434``.
+ *   3. ``http://localhost:11434/api/chat`` — default.
+ */
+export function resolveOllamaEndpoint(
+  env: Record<string, string | undefined> = typeof process !== 'undefined' ? process.env : {},
+): string {
+  const explicit = env.HMAN_LLM_ENDPOINT?.trim();
+  if (explicit) return explicit;
+  const base = env.HMAN_OLLAMA_URL?.trim();
+  if (base) return `${base.replace(/\/+$/, '')}/api/chat`;
+  return 'http://localhost:11434/api/chat';
+}
+
+/** Default chat model: ``HMAN_LLM_MODEL`` → ``HMAN_VOICE_MODEL`` → ``llama3.2:3b``. */
+export function resolveOllamaModel(
+  env: Record<string, string | undefined> = typeof process !== 'undefined' ? process.env : {},
+): string {
+  return env.HMAN_LLM_MODEL?.trim() || env.HMAN_VOICE_MODEL?.trim() || 'llama3.2:3b';
+}
+
+/**
+ * Default Ollama-backed LLM client. Defaults the endpoint and model from the
+ * environment (see {@link resolveOllamaEndpoint}) so it honours the same
+ * ``HMAN_OLLAMA_URL`` the voice loop uses; pass explicit args to override.
+ * No retries, no streaming — the connector's ``draft`` step is single-shot
+ * and small.
  */
 export class OllamaLLMClient implements LLMClient {
+  private readonly model: string;
+  private readonly endpoint: string;
+  private readonly fetchImpl: typeof fetch;
+
   constructor(
-    private readonly model: string = 'llama3.2:3b',
-    private readonly endpoint: string = 'http://localhost:11434/api/chat',
-    private readonly fetchImpl: typeof fetch = fetch,
-  ) {}
+    model: string = resolveOllamaModel(),
+    endpoint: string = resolveOllamaEndpoint(),
+    fetchImpl: typeof fetch = fetch,
+  ) {
+    this.model = model;
+    this.endpoint = endpoint;
+    this.fetchImpl = fetchImpl;
+  }
 
   async chat(input: {
     system: string;

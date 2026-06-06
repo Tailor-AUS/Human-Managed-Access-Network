@@ -10,9 +10,15 @@ Configuration via environment:
   - ``HMAN_GITHUB_DEFAULT_OWNER`` repo owner the LLM defaults to
   - ``HMAN_GITHUB_DEFAULT_REPO``  repo name the LLM defaults to
   - ``HMAN_GITHUB_ALLOWED_REPOS``  comma-separated ``owner/repo`` whitelist
-  - ``HMAN_LLM_ENDPOINT``         Ollama-compatible chat endpoint
-                                  (default: http://localhost:11434/api/chat)
-  - ``HMAN_LLM_MODEL``            default: ``llama3.2:3b``
+  - ``HMAN_LLM_ENDPOINT``         Ollama-compatible chat endpoint. When unset,
+                                  it is derived from ``HMAN_OLLAMA_URL`` (the
+                                  same var the voice loop reads) so a single
+                                  setting points the whole bridge at one local
+                                  inference box — e.g. an NVIDIA RTX/DGX Spark
+                                  on the LAN. Falls back to
+                                  ``http://localhost:11434/api/chat``.
+  - ``HMAN_LLM_MODEL``            chat model; falls back to ``HMAN_VOICE_MODEL``,
+                                  then ``llama3.2:3b``.
 """
 from __future__ import annotations
 
@@ -43,6 +49,26 @@ Rules:
 """
 
 
+def _resolve_llm_endpoint() -> str:
+    """Resolve the Ollama chat endpoint for drafting.
+
+    Precedence:
+      1. ``HMAN_LLM_ENDPOINT`` — explicit full chat URL, used verbatim.
+      2. ``HMAN_OLLAMA_URL``   — the *base* URL the voice loop also reads
+         (``api/server.py``). We append ``/api/chat`` so a single env var
+         points the whole bridge at one local inference box, e.g. an NVIDIA
+         RTX/DGX Spark at ``http://spark.local:11434``.
+      3. ``http://localhost:11434/api/chat`` — default.
+    """
+    explicit = os.environ.get("HMAN_LLM_ENDPOINT", "").strip()
+    if explicit:
+        return explicit
+    base = os.environ.get("HMAN_OLLAMA_URL", "").strip()
+    if base:
+        return f"{base.rstrip('/')}/api/chat"
+    return "http://localhost:11434/api/chat"
+
+
 @dataclass
 class GitHubConnectorConfig:
     default_owner: str
@@ -70,8 +96,14 @@ class GitHubConnectorConfig:
                 "HMAN_GITHUB_DEFAULT_REPO", "Human-Managed-Access-Network"
             ),
             allowed_repos=allowed,
-            llm_endpoint=os.environ.get("HMAN_LLM_ENDPOINT", "http://localhost:11434/api/chat"),
-            llm_model=os.environ.get("HMAN_LLM_MODEL", "llama3.2:3b"),
+            llm_endpoint=_resolve_llm_endpoint(),
+            # Reuse the voice model when no drafting-specific model is set, so
+            # both inference paths share one box + one downloaded model.
+            llm_model=(
+                os.environ.get("HMAN_LLM_MODEL")
+                or os.environ.get("HMAN_VOICE_MODEL")
+                or "llama3.2:3b"
+            ),
             token=os.environ.get("HMAN_GITHUB_TOKEN") or None,
         )
 
