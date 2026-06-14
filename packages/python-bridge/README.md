@@ -27,8 +27,10 @@ the device. Nothing phones home.
 ## Requirements
 
 - **Python 3.11+**
-- **CUDA-capable GPU** recommended (NVIDIA RTX). Will fall back to CPU,
-  but real-time verification latency degrades.
+- **CUDA-capable GPU** recommended (NVIDIA RTX / DGX Spark). Will fall back
+  to CPU, but real-time verification latency degrades. Device selection is
+  automatic; override with `HMAN_ENCODER_DEVICE` (e.g. `cuda:0` to pin a GPU,
+  or `cpu` to force CPU when a torch build mismatches the local CUDA runtime).
 - ~2 GB disk for model downloads on first run.
 
 ## Install

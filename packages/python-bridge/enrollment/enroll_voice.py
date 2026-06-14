@@ -129,6 +129,24 @@ def _encrypt_and_save(embedding: np.ndarray, passphrase: str, meta: dict) -> Pat
     return target
 
 
+def _resolve_compute_device() -> str:
+    """Pick the torch device for the voice encoder.
+
+    Mirrors ``core.resolve_compute_device`` (kept local so this CLI stays
+    standalone): honour ``HMAN_ENCODER_DEVICE`` (e.g. ``cuda:0`` / ``cpu``),
+    else auto-detect CUDA. The ``torch.cuda.is_available()`` probe is guarded
+    so a mismatched CUDA/torch build degrades to CPU instead of crashing
+    enrollment outright.
+    """
+    explicit = os.environ.get("HMAN_ENCODER_DEVICE", "").strip()
+    if explicit:
+        return explicit
+    try:
+        return "cuda" if torch.cuda.is_available() else "cpu"
+    except Exception:
+        return "cpu"
+
+
 def _record(duration_hint: float, device: int | None) -> np.ndarray | None:
     """Record until the user presses Enter to stop (or max duration)."""
     print(f"  Speak now. Press Enter when done (or wait {duration_hint:.0f}s max)...")
@@ -233,7 +251,7 @@ def main():
     # Load model
     print("  Loading voice encoder...")
     from resemblyzer import VoiceEncoder, preprocess_wav
-    enc_device = "cuda" if torch.cuda.is_available() else "cpu"
+    enc_device = _resolve_compute_device()
     encoder = VoiceEncoder(device=enc_device, verbose=False)
     print(f"  Loaded on {enc_device}.")
     print()

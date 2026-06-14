@@ -100,18 +100,39 @@ _encoder = None
 _encoder_lock = threading.Lock()
 
 
+def resolve_compute_device(override: str | None = None) -> str:
+    """Pick the torch device for the voice encoder.
+
+    Precedence:
+      1. ``override`` argument, when given.
+      2. ``HMAN_ENCODER_DEVICE`` env var — pin a specific GPU (``cuda:0``)
+         or force ``cpu``. Useful on an NVIDIA RTX/DGX Spark when the
+         installed torch build mismatches the local CUDA runtime: ``cuda``
+         imports but crashes at first use, so the operator forces ``cpu``.
+      3. Auto: ``cuda`` when torch reports it available, else ``cpu``.
+
+    The torch import is guarded — a broken CUDA/torch build (DLL load
+    failure, ABI mismatch) degrades to ``cpu`` instead of raising, so
+    neither the bridge nor CLI enrollment crash on import.
+    """
+    explicit = override or os.environ.get("HMAN_ENCODER_DEVICE", "").strip()
+    if explicit:
+        return explicit
+    try:
+        import torch
+        return "cuda" if torch.cuda.is_available() else "cpu"
+    except Exception:
+        return "cpu"
+
+
 def get_encoder(device: str | None = None):
-    """Return a cached resemblyzer VoiceEncoder. CUDA if available."""
+    """Return a cached resemblyzer VoiceEncoder. CUDA if available,
+    overridable via ``HMAN_ENCODER_DEVICE`` (see resolve_compute_device)."""
     global _encoder
     with _encoder_lock:
         if _encoder is None:
-            try:
-                import torch
-                auto_device = "cuda" if torch.cuda.is_available() else "cpu"
-            except Exception:
-                auto_device = "cpu"
             from resemblyzer import VoiceEncoder
-            _encoder = VoiceEncoder(device=device or auto_device, verbose=False)
+            _encoder = VoiceEncoder(device=resolve_compute_device(device), verbose=False)
         return _encoder
 
 
