@@ -699,6 +699,25 @@ def gates():
 
 _VOICE_MODEL = os.environ.get("HMAN_VOICE_MODEL", "llama3.2:3b").strip() or "llama3.2:3b"
 _OLLAMA_URL = os.environ.get("HMAN_OLLAMA_URL", "http://localhost:11434").rstrip("/")
+
+
+def _ollama_timeout(default: float = 120.0) -> float:
+    """Request timeout (s) for Ollama calls, override via HMAN_OLLAMA_TIMEOUT.
+
+    Default is generous: the *first* request to a model includes a cold load
+    of the weights into GPU memory, which on a larger model / bigger box
+    (NVIDIA RTX / DGX Spark) can take well over a minute. Subsequent calls
+    are fast. Operators running small models on fast hardware can lower it.
+    """
+    raw = os.environ.get("HMAN_OLLAMA_TIMEOUT", "").strip()
+    if raw:
+        try:
+            v = float(raw)
+            if v > 0:
+                return v
+        except ValueError:
+            pass
+    return default
 _TTS_MODEL_PATH = Path(
     os.environ.get(
         "HMAN_TTS_MODEL",
@@ -791,7 +810,7 @@ def _ollama_chat_sync(prompt: str, context: Optional[str]) -> str:
     r = requests.post(
         f"{_OLLAMA_URL}/api/chat",
         json={"model": _VOICE_MODEL, "messages": messages, "stream": False},
-        timeout=60,
+        timeout=_ollama_timeout(),
     )
     r.raise_for_status()
     body = r.json()

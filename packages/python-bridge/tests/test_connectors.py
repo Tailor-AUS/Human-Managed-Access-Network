@@ -301,6 +301,40 @@ def test_llm_model_falls_back_to_voice_model(monkeypatch):
     assert cfg.llm_model == "llama3.1:8b"
 
 
+def test_llm_timeout_default_is_generous(monkeypatch):
+    monkeypatch.delenv("HMAN_OLLAMA_TIMEOUT", raising=False)
+    for mod in list(sys.modules):
+        if mod.startswith("connectors"):
+            del sys.modules[mod]
+    from connectors.github import GitHubConnectorConfig
+
+    cfg = GitHubConnectorConfig.from_env()
+    # Generous default so a cold model load on a Spark box doesn't time out.
+    assert cfg.llm_timeout == 120.0
+
+
+def test_llm_timeout_env_override(monkeypatch):
+    monkeypatch.setenv("HMAN_OLLAMA_TIMEOUT", "300")
+    for mod in list(sys.modules):
+        if mod.startswith("connectors"):
+            del sys.modules[mod]
+    from connectors.github import GitHubConnectorConfig
+
+    cfg = GitHubConnectorConfig.from_env()
+    assert cfg.llm_timeout == 300.0
+
+
+def test_llm_timeout_ignores_garbage(monkeypatch):
+    monkeypatch.setenv("HMAN_OLLAMA_TIMEOUT", "nope")
+    for mod in list(sys.modules):
+        if mod.startswith("connectors"):
+            del sys.modules[mod]
+    from connectors.github import GitHubConnectorConfig
+
+    cfg = GitHubConnectorConfig.from_env()
+    assert cfg.llm_timeout == 120.0
+
+
 def test_audit_append_event_writes_jsonl(tmp_path, monkeypatch):
     monkeypatch.setenv("HMAN_DATA_DIR", str(tmp_path))
     # reload audit so it picks up new env

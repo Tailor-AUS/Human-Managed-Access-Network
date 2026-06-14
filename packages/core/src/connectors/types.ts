@@ -49,25 +49,47 @@ export function resolveOllamaModel(
 }
 
 /**
- * Default Ollama-backed LLM client. Defaults the endpoint and model from the
- * environment (see {@link resolveOllamaEndpoint}) so it honours the same
- * ``HMAN_OLLAMA_URL`` the voice loop uses; pass explicit args to override.
- * No retries, no streaming — the connector's ``draft`` step is single-shot
- * and small.
+ * Default Ollama request timeout in milliseconds; override via
+ * ``HMAN_OLLAMA_TIMEOUT`` (seconds, mirroring the Python bridge). Generous by
+ * default — the first request to a model cold-loads its weights into GPU
+ * memory, which on a larger model / bigger box (RTX/DGX Spark) can exceed a
+ * minute. ``fetch`` has no built-in timeout, so without this a stalled box
+ * would hang the draft forever.
+ */
+export function resolveOllamaTimeoutMs(
+  env: Record<string, string | undefined> = typeof process !== 'undefined' ? process.env : {},
+): number {
+  const raw = env.HMAN_OLLAMA_TIMEOUT?.trim();
+  if (raw) {
+    const secs = Number(raw);
+    if (Number.isFinite(secs) && secs > 0) return secs * 1000;
+  }
+  return 120_000;
+}
+
+/**
+ * Default Ollama-backed LLM client. Defaults the endpoint, model and timeout
+ * from the environment (see {@link resolveOllamaEndpoint}) so it honours the
+ * same ``HMAN_OLLAMA_URL`` the voice loop uses; pass explicit args to
+ * override. No retries, no streaming — the connector's ``draft`` step is
+ * single-shot and small.
  */
 export class OllamaLLMClient implements LLMClient {
   private readonly model: string;
   private readonly endpoint: string;
   private readonly fetchImpl: typeof fetch;
+  private readonly timeoutMs: number;
 
   constructor(
     model: string = resolveOllamaModel(),
     endpoint: string = resolveOllamaEndpoint(),
     fetchImpl: typeof fetch = fetch,
+    timeoutMs: number = resolveOllamaTimeoutMs(),
   ) {
     this.model = model;
     this.endpoint = endpoint;
     this.fetchImpl = fetchImpl;
+    this.timeoutMs = timeoutMs;
   }
 
   async chat(input: {
@@ -75,19 +97,34 @@ export class OllamaLLMClient implements LLMClient {
     user: string;
     options?: Record<string, unknown>;
   }): Promise<string> {
-    const res = await this.fetchImpl(this.endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: this.model,
-        messages: [
-          { role: 'system', content: input.system },
-          { role: 'user', content: input.user },
-        ],
-        stream: false,
-        options: input.options,
-      }),
-    });
+    // fetch has no built-in timeout — abort a stalled inference box rather
+    // than hang the draft forever.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    let res: Response;
+    try {
+      res = await this.fetchImpl(this.endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: this.model,
+          messages: [
+            { role: 'system', content: input.system },
+            { role: 'user', content: input.user },
+          ],
+          stream: false,
+          options: input.options,
+        }),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        throw new Error(`Ollama chat timed out after ${this.timeoutMs}ms`);
+      }
+      throw err;
+    } finally {
+      clearTimeout(timer);
+    }
     if (!res.ok) {
       throw new Error(`Ollama chat failed: ${res.status} ${res.statusText}`);
     }

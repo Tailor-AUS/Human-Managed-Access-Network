@@ -31,6 +31,10 @@ the device. Nothing phones home.
   to CPU, but real-time verification latency degrades. Device selection is
   automatic; override with `HMAN_ENCODER_DEVICE` (e.g. `cuda:0` to pin a GPU,
   or `cpu` to force CPU when a torch build mismatches the local CUDA runtime).
+- **Local LLM** (Ollama) for voice replies and issue drafting. Point the whole
+  bridge at one box with `HMAN_OLLAMA_URL` (e.g. `http://spark.local:11434`).
+  Inference timeout defaults to 120s (cold model loads on a big box can be
+  slow); tune with `HMAN_OLLAMA_TIMEOUT` (seconds).
 - ~2 GB disk for model downloads on first run.
 
 ## Install

@@ -19,7 +19,12 @@ import {
   signAttestation,
 } from '../connectors/github.js';
 import type { GitHubClient, LLMClient } from '../connectors/types.js';
-import { resolveOllamaEndpoint, resolveOllamaModel } from '../connectors/types.js';
+import {
+  resolveOllamaEndpoint,
+  resolveOllamaModel,
+  resolveOllamaTimeoutMs,
+  OllamaLLMClient,
+} from '../connectors/types.js';
 import type { Intention, PACTAttestation } from '../connectors/Connector.js';
 
 class StubLLM implements LLMClient {
@@ -387,5 +392,45 @@ describe('resolveOllamaModel', () => {
       'qwen2.5:7b',
     );
     expect(resolveOllamaModel({})).toBe('llama3.2:3b');
+  });
+});
+
+describe('resolveOllamaTimeoutMs', () => {
+  it('defaults to a generous 120s for cold model loads on a Spark box', () => {
+    expect(resolveOllamaTimeoutMs({})).toBe(120_000);
+  });
+
+  it('reads HMAN_OLLAMA_TIMEOUT as seconds', () => {
+    expect(resolveOllamaTimeoutMs({ HMAN_OLLAMA_TIMEOUT: '300' })).toBe(300_000);
+  });
+
+  it('ignores non-positive or garbage values', () => {
+    expect(resolveOllamaTimeoutMs({ HMAN_OLLAMA_TIMEOUT: '0' })).toBe(120_000);
+    expect(resolveOllamaTimeoutMs({ HMAN_OLLAMA_TIMEOUT: 'soon' })).toBe(120_000);
+  });
+});
+
+describe('OllamaLLMClient timeout', () => {
+  it('aborts and reports a timeout when the box stalls', async () => {
+    // A fetch that rejects with AbortError once the client's signal fires.
+    const stalling: typeof fetch = (_url, init) =>
+      new Promise((_resolve, reject) => {
+        const signal = (init as RequestInit | undefined)?.signal as AbortSignal | undefined;
+        signal?.addEventListener('abort', () => {
+          const e = new Error('aborted');
+          e.name = 'AbortError';
+          reject(e);
+        });
+      });
+
+    const client = new OllamaLLMClient('m', 'http://spark.local:11434/api/chat', stalling, 20);
+    await expect(client.chat({ system: 's', user: 'u' })).rejects.toThrow(/timed out after 20ms/);
+  });
+
+  it('returns content on a normal reply', async () => {
+    const ok: typeof fetch = async () =>
+      new Response(JSON.stringify({ message: { content: '  hi  ' } }), { status: 200 });
+    const client = new OllamaLLMClient('m', 'http://localhost:11434/api/chat', ok, 1000);
+    expect(await client.chat({ system: 's', user: 'u' })).toBe('hi');
   });
 });

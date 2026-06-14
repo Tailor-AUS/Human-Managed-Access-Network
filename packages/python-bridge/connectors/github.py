@@ -69,6 +69,24 @@ def _resolve_llm_endpoint() -> str:
     return "http://localhost:11434/api/chat"
 
 
+def _resolve_llm_timeout(default: float = 120.0) -> float:
+    """Ollama request timeout (s); override via HMAN_OLLAMA_TIMEOUT.
+
+    Default is generous: the first request to a model cold-loads its weights
+    into GPU memory, which on a larger model / bigger box (RTX/DGX Spark) can
+    exceed a minute. Mirrors ``api/server._ollama_timeout``.
+    """
+    raw = os.environ.get("HMAN_OLLAMA_TIMEOUT", "").strip()
+    if raw:
+        try:
+            v = float(raw)
+            if v > 0:
+                return v
+        except ValueError:
+            pass
+    return default
+
+
 @dataclass
 class GitHubConnectorConfig:
     default_owner: str
@@ -76,6 +94,7 @@ class GitHubConnectorConfig:
     allowed_repos: Optional[list[tuple[str, str]]] = None
     llm_endpoint: str = "http://localhost:11434/api/chat"
     llm_model: str = "llama3.2:3b"
+    llm_timeout: float = 120.0
     token: Optional[str] = None
     api_base: str = "https://api.github.com"
 
@@ -104,6 +123,7 @@ class GitHubConnectorConfig:
                 or os.environ.get("HMAN_VOICE_MODEL")
                 or "llama3.2:3b"
             ),
+            llm_timeout=_resolve_llm_timeout(),
             token=os.environ.get("HMAN_GITHUB_TOKEN") or None,
         )
 
@@ -172,7 +192,7 @@ class GitHubConnector:
                 "stream": False,
                 "options": {"temperature": 0.2},
             },
-            timeout=60,
+            timeout=self.config.llm_timeout,
         )
         res.raise_for_status()
         data = res.json()

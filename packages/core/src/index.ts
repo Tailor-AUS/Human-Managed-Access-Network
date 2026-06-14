@@ -293,6 +293,7 @@ export {
   FetchGitHubClient,
   resolveOllamaEndpoint,
   resolveOllamaModel,
+  resolveOllamaTimeoutMs,
   type Connector,
   type Intention,
   type ExecutionResult as ConnectorExecutionResult,
