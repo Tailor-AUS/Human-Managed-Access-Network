@@ -3,7 +3,11 @@
 **Your personal subconscious. Local. Encrypted. Yours.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Built on PACT](https://img.shields.io/badge/built%20on-PACT-blue)](https://github.com/Tailor-AUS/pact)
+[![Built on PACT](https://img.shields.io/badge/built%20on-PACT-blue)](https://github.com/TailorAU/pact)
+
+> **Not PACT.** .HMAN is the MIT reference implementation of PACT §17/§18.
+> Registration is local voice enrol — [docs/REGISTRATION.md](docs/REGISTRATION.md).
+> Family: [PACT_FAMILY.md](https://github.com/TailorAU/pact/blob/main/docs/PACT_FAMILY.md).
 
 ---
 
@@ -88,6 +92,10 @@ npm run dev             # opens localhost:5173
 Open `http://localhost:5173/` — that's your front door. Follow the
 Onboarding flow to enrol your voice. From there, every action .HMAN takes
 on your behalf is cryptographically gated to you.
+
+**That onboarding *is* registration.** There is no public `register .hman`
+door, no `sovrgn.ai/hman` signup (404), and no global handle namespace.
+See [docs/REGISTRATION.md](docs/REGISTRATION.md).
 
 ---
 
