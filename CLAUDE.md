@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 .HMAN (Human Managed Access Network) is a privacy-first platform for sovereign personal AI. Local LLM, voice-bound biometric, consent on every action, no cloud dependency. MIT-licensed.
 
+**PACT boundary:** .HMAN is the reference implementation of PACT §17/§18. Do not merge this codebase into PACT; do not write HMAN-only assumptions into the PACT spec. Family map: [PACT_FAMILY.md](https://github.com/TailorAU/pact/blob/main/docs/PACT_FAMILY.md).
+
+**Registration:** local voice enrol only. Do not invent a public handle registry or a Sovrgn/AINK signup. How: [docs/REGISTRATION.md](docs/REGISTRATION.md). Do not write a member's local id or home path into this repo.
+
 One pnpm workspace spans three runtimes plus IaC: a TypeScript SDK + MCP server, a Python FastAPI bridge, a .NET 9 Azure Relay listener, and a React/Vite web dashboard.
 
 ## The Five Gates (load-bearing invariants)
